@@ -1,0 +1,28 @@
+[gd_scene load_steps=5 format=3 uid="uid://3m16pqlxta3h"]
+
+[ext_resource type="Script" uid="uid://bum86bndhmfxq" path="res://addons/cwispy/classes/blob.gd" id="1_njovj"]
+[ext_resource type="Script" uid="uid://d04xy5ebyu0ur" path="res://src/blobs/player_blob/player_net_input.gd" id="2_dranj"]
+[ext_resource type="Script" uid="uid://d0qsjv7dclj4k" path="res://addons/netfox/rollback/rollback-synchronizer.gd" id="3_6od8i"]
+[ext_resource type="Script" uid="uid://qyysks188bdl" path="res://addons/netfox/tick-interpolator.gd" id="4_1dtl2"]
+
+[node name="Blob" type="CharacterBody2D" node_paths=PackedStringArray("net_input")]
+script = ExtResource("1_njovj")
+spawn_props = Array[String](["position"])
+net_input = NodePath("NetInput")
+
+[node name="NetInput" type="Node" parent="."]
+script = ExtResource("2_dranj")
+metadata/_custom_type_script = "uid://b2p3pdkkekxo2"
+
+[node name="RollbackSynchronizer" type="Node" parent="." node_paths=PackedStringArray("root")]
+script = ExtResource("3_6od8i")
+root = NodePath("..")
+state_properties = Array[String]([":global_transform"])
+input_properties = Array[String](["NetInput:movement"])
+metadata/_custom_type_script = "uid://d0qsjv7dclj4k"
+
+[node name="TickInterpolator" type="Node" parent="." node_paths=PackedStringArray("root")]
+script = ExtResource("4_1dtl2")
+root = NodePath("..")
+properties = Array[String]([":global_transform"])
+metadata/_custom_type_script = "uid://qyysks188bdl"

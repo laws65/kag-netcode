@@ -1,0 +1,25 @@
+[gd_scene load_steps=5 format=3 uid="uid://dkiva5p8qrip2"]
+
+[ext_resource type="PackedScene" uid="uid://3m16pqlxta3h" path="res://src/blobs/blob/blob.tscn" id="1_0b5ix"]
+[ext_resource type="Script" uid="uid://bqv3nvdy7nb1h" path="res://src/blobs/player_blob/player_blob.gd" id="2_oinls"]
+[ext_resource type="Texture2D" uid="uid://brs8ipgxhu0vx" path="res://icon.svg" id="3_oj3xq"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_oinls"]
+size = Vector2(12.8, 12.8)
+
+[node name="PlayerBlob" instance=ExtResource("1_0b5ix")]
+script = ExtResource("2_oinls")
+spawn_props = Array[String]([])
+
+[node name="RollbackSynchronizer" parent="." index="1" node_paths=PackedStringArray("root")]
+root = NodePath("..")
+
+[node name="TickInterpolator" parent="." index="2" node_paths=PackedStringArray("root")]
+root = NodePath("..")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." index="3"]
+shape = SubResource("RectangleShape2D_oinls")
+
+[node name="Sprite2D" type="Sprite2D" parent="." index="4"]
+scale = Vector2(0.1, 0.1)
+texture = ExtResource("3_oj3xq")

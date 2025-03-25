@@ -1,0 +1,17 @@
+[gd_scene load_steps=2 format=3 uid="uid://du4xiebgbubp0"]
+
+[ext_resource type="PackedScene" uid="uid://m1fpd4felkdb" path="res://src/client/ui/main_menu/main_menu.tscn" id="1_4uf4t"]
+
+[node name="Main" type="Node"]
+
+[node name="MainMenu" parent="." instance=ExtResource("1_4uf4t")]
+
+[node name="Players" type="Node" parent="."]
+
+[node name="Scripts" type="Node" parent="."]
+
+[node name="Game" type="Node2D" parent="."]
+
+[node name="Map" type="Node2D" parent="Game"]
+
+[node name="Blobs" type="Node2D" parent="Game"]

@@ -1,0 +1,120 @@
+extends CharacterBody2D
+class_name Blob
+
+signal player_id_changed(old_id: int, new_id: int)
+
+
+var _player_id := -1
+
+@export var spawn_props: Array[String]
+@export var net_input: BaseNetInput
+
+
+func _ready() -> void:
+	$RollbackSynchronizer.process_settings()
+
+
+func load_spawn_data(params: Dictionary) -> void:
+	name = str(params["id"])
+	
+	for prop_name in params:
+		if prop_name == "id": continue
+		
+		var split := prop_name.split(":") as PackedStringArray
+		var node_path := "."
+		var node_prop := ""
+		if split.size() == 1:
+			node_prop = split[0]
+		else:
+			node_path = split[0]
+			node_prop = split[1]
+		get_node(node_path).set(node_prop, params[prop_name])
+
+
+func get_spawn_data() -> Dictionary:
+	var spawn_data := {
+		"path": scene_file_path,
+		"id": get_id(),
+	}
+	
+	for prop_name in spawn_props:
+		var split := prop_name.split(":") as PackedStringArray
+		var node_path := "."
+		var node_prop := ""
+		if split.size() == 1:
+			node_prop = split[0]
+		else:
+			node_path = split[0]
+			node_prop = split[1]
+		spawn_data[prop_name] = get_node(node_path).get(node_prop)
+	
+	return spawn_data
+
+
+func get_id() -> int:
+	return int(str(name))
+
+
+static func get_blobs() -> Array:
+	return Multiplayer.get_blobs_parent().get_children() as Array
+
+
+static func blob_id_exists(blob_id: int) -> bool:
+	return blob_id > 0 and Multiplayer.get_blobs_parent().has_node(str(blob_id))
+
+
+static func get_blob_by_id(blob_id: int) -> Blob:
+	if blob_id > 0 and Multiplayer.get_blobs_parent().has_node(str(blob_id)):
+		return Multiplayer.get_blobs_parent().get_node(str(blob_id)) as Blob
+	return null
+
+
+func has_player() -> bool:
+	return _player_id != -1
+
+
+func is_my_blob() -> bool:
+	return _player_id == multiplayer.get_unique_id()
+
+
+func get_player_id() -> int:
+	return _player_id
+
+
+func server_set_player_id(player_id: int) -> void:
+	assert(Multiplayer.is_server(), "Must be called on server")
+	_set_player_id.rpc_id(0, player_id)
+
+
+func server_set_player(player: Player) -> void:
+	assert(Multiplayer.is_server(), "Must be called on server")
+	_set_player_id.rpc_id(0, player.get_id())
+
+
+@rpc("call_local", "reliable")
+func _set_player_id(player_id: int) -> void:
+	set_player_id(player_id)
+	var player := Player.get_player_by_id(player_id)
+
+	if player != null:
+		player.set_blob_id(get_id())
+
+
+func set_player_id(player_id: int) -> void:
+	var old_id := _player_id
+	_player_id = player_id
+	net_input.set_multiplayer_authority(player_id)
+	
+	player_id_changed.emit(old_id, player_id)
+
+
+func server_kill() -> void:
+	assert(Multiplayer.is_server())
+	_die.rpc_id(0)
+
+
+@rpc("call_local", "reliable")
+func _die() -> void:
+	queue_free()
+	Multiplayer.blob_died.emit(self)
+	get_parent().remove_child(self)

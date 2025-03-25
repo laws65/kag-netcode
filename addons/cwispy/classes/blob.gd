@@ -7,11 +7,6 @@ signal player_id_changed(old_id: int, new_id: int)
 var _player_id := -1
 
 @export var spawn_props: Array[String]
-@export var net_input: BaseNetInput
-
-
-func _ready() -> void:
-	$RollbackSynchronizer.process_settings()
 
 
 func load_spawn_data(params: Dictionary) -> void:
@@ -103,7 +98,6 @@ func _set_player_id(player_id: int) -> void:
 func set_player_id(player_id: int) -> void:
 	var old_id := _player_id
 	_player_id = player_id
-	net_input.set_multiplayer_authority(player_id)
 	
 	player_id_changed.emit(old_id, player_id)
 

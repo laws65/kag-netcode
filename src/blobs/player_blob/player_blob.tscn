@@ -5,21 +5,17 @@
 [ext_resource type="Texture2D" uid="uid://brs8ipgxhu0vx" path="res://icon.svg" id="3_oj3xq"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_oinls"]
-size = Vector2(12.8, 12.8)
+size = Vector2(12, 18)
 
 [node name="PlayerBlob" instance=ExtResource("1_0b5ix")]
 script = ExtResource("2_oinls")
 spawn_props = Array[String]([])
 
-[node name="RollbackSynchronizer" parent="." index="1" node_paths=PackedStringArray("root")]
-root = NodePath("..")
-
-[node name="TickInterpolator" parent="." index="2" node_paths=PackedStringArray("root")]
-root = NodePath("..")
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." index="3"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." index="0"]
+position = Vector2(0, -9)
 shape = SubResource("RectangleShape2D_oinls")
 
-[node name="Sprite2D" type="Sprite2D" parent="." index="4"]
-scale = Vector2(0.1, 0.1)
+[node name="Sprite2D" type="Sprite2D" parent="." index="1"]
+position = Vector2(0, -9)
+scale = Vector2(0.094, 0.141)
 texture = ExtResource("3_oj3xq")

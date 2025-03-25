@@ -21,12 +21,12 @@ func _on_joined_server() -> void:
 
 
 func _on_server_start_button_up() -> void:
-	var port := 50301
+	var port := 50302
 	Multiplayer.start_server(port)
 
 
 func _on_client_start_button_up() -> void:
 	var ip := "127.0.0.1"
-	var port := 50301
+	var port := 50302
 	var username := %ClientUsername.text as String
 	Multiplayer.join_server(ip, port, [username])

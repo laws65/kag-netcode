@@ -1,10 +1,13 @@
-[gd_scene load_steps=2 format=3 uid="uid://du4xiebgbubp0"]
+[gd_scene load_steps=3 format=3 uid="uid://du4xiebgbubp0"]
 
 [ext_resource type="PackedScene" uid="uid://m1fpd4felkdb" path="res://src/client/ui/main_menu/main_menu.tscn" id="1_4uf4t"]
+[ext_resource type="Script" uid="uid://cjrujv63ofsg6" path="res://src/client/client_camera.gd" id="2_3s6yk"]
 
 [node name="Main" type="Node"]
 
-[node name="MainMenu" parent="." instance=ExtResource("1_4uf4t")]
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="MainMenu" parent="CanvasLayer" instance=ExtResource("1_4uf4t")]
 
 [node name="Players" type="Node" parent="."]
 
@@ -15,3 +18,8 @@
 [node name="Map" type="Node2D" parent="Game"]
 
 [node name="Blobs" type="Node2D" parent="Game"]
+
+[node name="Camera2D" type="Camera2D" parent="Game"]
+physics_interpolation_mode = 2
+zoom = Vector2(4, 4)
+script = ExtResource("2_3s6yk")

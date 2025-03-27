@@ -22,20 +22,33 @@ var current_bounce_cooldown = 0
 
 var just_jumped := false
 
-func _rollback_tick(_delta: float, _tick: int, _is_fresh: bool) -> void:
-	pass
-
-
-func _physics_process(delta: float) -> void:
-	if not is_my_blob():
+func _rollback_tick(delta: float, tick: int, _is_fresh: bool) -> void:
+	cum_ticks += 1
+	if cum_ticks <= 120:
 		return
+	delta = 1/60.0
+	if not is_my_blob() and not Multiplayer.is_server():
+		return
+		
 	if current_bounce_cooldown > 0 and is_on_floor():
 		current_bounce_cooldown -= 1
 	
-	var direction = Input.get_axis("left", "right")
+	NetworkedInput.set_time(tick)
+	NetworkedInput.set_target(get_player_id())
 	
+	var i_direction = NetworkedInput.get_input("movement")
+	var i_mouse = NetworkedInput.get_input("mouse")
+	var mouse_pos = global_position
+	var direction := 0.0
+	var jump_pressed := false
+
+	if i_direction != null:
+		direction = i_direction.x
+		jump_pressed = i_direction.y < 0
+
+
 	var facing = 1
-	if get_global_mouse_position().x < position.x:
+	if mouse_pos.x < position.x:
 		facing = -1
 	if is_on_floor():
 		if sign(velocity.x) == -direction:
@@ -62,14 +75,13 @@ func _physics_process(delta: float) -> void:
 		else:
 			velocity.x = clamp(velocity.x, -max_air_speed*0.8, max_air_speed*0.8)
 
-
-	if Input.is_action_pressed("up") and current_bounce_cooldown == 0:
+	if jump_pressed and current_bounce_cooldown == 0:
 		if is_on_floor():
 			just_jumped = true
 			current_bounce_cooldown = bounce_cooldown_time_ticks
 			velocity.y -= jump_force
 	
-	if just_jumped and Input.is_action_pressed("up") and velocity.y < 0:
+	if just_jumped and jump_pressed and velocity.y < 0:
 		velocity.y += gravity * 0.5 * delta
 	else:
 		if is_on_wall() and direction != 0:
@@ -82,4 +94,9 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	
 	if is_on_floor():
+		if just_jumped:
+			velocity.x *= 0.75
 		just_jumped = false
+
+
+var cum_ticks := 0

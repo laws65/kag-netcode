@@ -179,7 +179,10 @@ func server_active() -> bool:
 
 
 func is_client() -> bool:
-	return server_active() and not multiplayer.is_server()
+	if not server_active():
+		return false
+	
+	return my_player_exists()
 
 
 func is_server() -> bool:

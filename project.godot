@@ -28,10 +28,10 @@ NetworkEvents="*res://addons/netfox/network-events.gd"
 NetworkPerformance="*res://addons/netfox/network-performance.gd"
 WindowTiler="*res://addons/netfox.extras/window-tiler.gd"
 NetworkedInput="*res://addons/cwispy/singletons/networked_input.gd"
+Synchroniser="*res://addons/cwispy/singletons/synchroniser.gd"
 
 [display]
 
-window/size/mode=4
 window/vsync/vsync_mode=0
 
 [editor_plugins]
@@ -71,12 +71,14 @@ secondary={
 logging/netfox_extras_log_level=4
 logging/log_level=4
 logging/netfox_log_level=4
-time/sync_to_physics=true
+time/sync_to_physics=false
 rollback/enabled=false
+time/tickrate=60
 
 [physics]
 
 common/physics_jitter_fix=0.0
+2d/physics_engine="Rapier2D"
 common/physics_interpolation=true
 
 [rendering]

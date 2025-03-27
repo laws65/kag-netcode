@@ -6,3 +6,4 @@
 physics_interpolation_mode = 1
 script = ExtResource("1_njovj")
 spawn_props = Array[String](["position"])
+snapshot_props = Array[String](["position", "velocity"])

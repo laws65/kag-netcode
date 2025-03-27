@@ -7,6 +7,7 @@ signal player_id_changed(old_id: int, new_id: int)
 var _player_id := -1
 
 @export var spawn_props: Array[String]
+@export var snapshot_props: Array[String]
 
 
 func load_spawn_data(params: Dictionary) -> void:
@@ -112,3 +113,43 @@ func _die() -> void:
 	queue_free()
 	Multiplayer.blob_died.emit(self)
 	get_parent().remove_child(self)
+
+
+func aget_snapshot() -> Dictionary:
+	return {"position": position, "velocity": velocity}
+
+
+func aload_snapshot(snapshot: Dictionary) -> void:
+	if snapshot.has("position"):
+		position = snapshot["position"]
+	if snapshot.has("velocity"):
+		velocity = snapshot["velocity"]
+
+
+func load_snapshot(snapshot: Dictionary) -> void:
+	for prop_name in snapshot.keys():
+		var split := prop_name.split(":") as PackedStringArray
+		var node_path := "."
+		var node_prop := ""
+		if split.size() == 1:
+			node_prop = split[0]
+		else:
+			node_path = split[0]
+			node_prop = split[1]
+		get_node(node_path).set(node_prop, snapshot[prop_name])
+
+
+func get_snapshot() -> Dictionary:
+	var snapshot: Dictionary
+	for prop_name in snapshot_props:
+		var split := prop_name.split(":") as PackedStringArray
+		var node_path := "."
+		var node_prop := ""
+		if split.size() == 1:
+			node_prop = split[0]
+		else:
+			node_path = split[0]
+			node_prop = split[1]
+		snapshot[prop_name] = get_node(node_path).get(node_prop)
+	
+	return snapshot

@@ -32,7 +32,6 @@ Synchroniser="*res://addons/cwispy/singletons/synchroniser.gd"
 
 [display]
 
-window/size/mode=4
 window/vsync/vsync_mode=0
 
 [editor_plugins]

@@ -107,6 +107,11 @@ func _rollback_tick(delta: float, tick: int, is_fresh: bool = true) -> void:
 			velocity.x *= 0.75
 		just_jumped = false
 
+	if i_direction == null or i_direction.x == 0.0:
+		$AnimationPlayer.play("idle")
+	else:
+		$AnimationPlayer.play("walk")
+
 
 
 

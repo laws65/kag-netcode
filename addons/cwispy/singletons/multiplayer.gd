@@ -187,7 +187,7 @@ func is_client() -> bool:
 	if not server_active():
 		return false
 
-	return my_player_exists()
+	return has_local_player()
 
 
 
@@ -196,7 +196,7 @@ func is_server() -> bool:
 
 
 func get_my_blob() -> Blob:
-	if my_player_exists():
+	if has_local_player():
 		return get_my_player().get_blob()
 	return null
 
@@ -205,5 +205,9 @@ func get_my_player() -> Player:
 	return Player.get_player_by_id(multiplayer.get_unique_id())
 
 
-func my_player_exists() -> bool:
-	return get_my_player() != null
+func has_local_player() -> bool:
+	return Player.is_valid_player(get_my_player())
+
+
+func has_local_blob() -> bool:
+	return Blob.is_valid_blob(get_my_blob())

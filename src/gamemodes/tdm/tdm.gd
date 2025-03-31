@@ -9,7 +9,7 @@ func _ready() -> void:
 func _on_Player_joined(player: Player) -> void:
 	if not Multiplayer.is_server():
 		return
-	
+
 	var random_pos := Vector3(
 		randf_range(-4, 4), 10, randf_range(-4, 4)
 	)

@@ -34,7 +34,8 @@ func _post_tick(_delta: float, tick: int) -> void:
 
 
 func _sync_blobs() -> void:
-	# TODO add client side prediction code, clean up remote client prediction code
+	# TODO add client side prediction code
+	# TODO consider having a 1 input buffer for client inputs
 	# TODO investigate why it takes so long to quit game
 	var rtt := NetworkTime.remote_rtt * 1000
 	var half_tick_rtt: int = ceil(
@@ -50,6 +51,7 @@ func _sync_blobs() -> void:
 			var snapshot: Dictionary = _state_snapshots[i]
 			#print("loading tick ", render_tick)
 			_load_snapshot(snapshot)
+			_attempt_client_prediction_from(render_tick, NetworkTime.tick)
 			Synchroniser.after_tick.emit()
 			return
 
@@ -65,40 +67,32 @@ func _sync_blobs() -> void:
 	if recent_snapshot_before_render_tick["time"] == -1:
 		print("Couldn't even find snapshot, returning")
 		return
+
 	var ticks_to_simulate := render_tick - recent_snapshot_before_render_tick["time"] as int
-
 	var player_inputs := recent_snapshot_before_render_tick["inputs"] as Dictionary[int, Dictionary]
+	var blobs_to_simulate := recent_snapshot_before_render_tick["blobs"].keys() as Array
+
 	while ticks_to_simulate > 0:
-		#print("simulating tick ", render_tick - ticks_to_simulate + 1,)
-		var blobs_to_simulate := recent_snapshot_before_render_tick["blobs"].keys() as Array
-
-		for player_id in player_inputs.keys():
-			var player := Player.get_player_by_id(player_id)
-			if not Player.is_valid_player(player):
-				continue
-			var blob := player.get_blob()
-			if not Blob.is_valid_blob(blob):
-				continue
-
-			blob.load_snapshot(recent_snapshot_before_render_tick["blobs"][blob.get_id()])
-			NetworkedInput._add_inputs_to_buffer(player_inputs[player_id], render_tick, player_id)
-			blob._rollback_tick(NetworkTime.ticktime, render_tick - ticks_to_simulate + 1, false)
-			NetworkedInput._remove_player_inputs(player_id)
-
-			blobs_to_simulate.erase(blob.get_id())
-
+		var simulated_render_tick: int = render_tick - ticks_to_simulate + 1
 		for blob_id in blobs_to_simulate:
 			var blob := Blob.get_blob_by_id(blob_id)
 			blob.load_snapshot(recent_snapshot_before_render_tick["blobs"][blob.get_id()])
-			blob._rollback_tick(NetworkTime.ticktime, render_tick - ticks_to_simulate + 1, false)
+			if blob.has_player():
+				var player_id := blob.get_player_id()
+				var inputs := player_inputs[player_id]
+				NetworkedInput._add_inputs_to_buffer(player_inputs[player_id], render_tick, player_id)
+				blob._rollback_tick(NetworkTime.ticktime, simulated_render_tick, false)
+			else:
+				blob._rollback_tick(NetworkTime.ticktime, simulated_render_tick, false)
 
 		if ticks_to_simulate > 1:
-			var snapshot := _create_world_snapshot(render_tick - ticks_to_simulate + 1)
+			var snapshot := _create_world_snapshot(simulated_render_tick)
 			_insert_snapshot_into_buffer(snapshot)
 
 		ticks_to_simulate -= 1
 
-		after_tick.emit()
+	_attempt_client_prediction_from(render_tick, NetworkTime.tick)
+	after_tick.emit()
 
 
 func _get_interpolated_snapshot(old_snapshot: Dictionary, new_snapshot: Dictionary, interpolation_delta: float) -> Dictionary:
@@ -189,3 +183,20 @@ func _create_world_snapshot(time: int) -> Dictionary:
 		output["inputs"] = player_inputs
 
 	return output
+
+
+func _attempt_client_prediction_from(from_tick: int, to_tick: int) -> void:
+	return
+	assert(from_tick <= to_tick)
+
+	if not Multiplayer.is_client(): return
+	if not Multiplayer.has_local_blob(): return
+
+	var blob := Multiplayer.get_my_blob()
+
+	var current_tick := from_tick
+	while current_tick <= to_tick:
+		blob._rollback_tick(NetworkTime.ticktime, current_tick, false)
+
+
+		current_tick += 1

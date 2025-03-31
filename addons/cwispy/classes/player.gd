@@ -64,8 +64,13 @@ static func player_exists(player_id: int) -> bool:
 	return Multiplayer.get_players_parent().has_node(str(player_id))
 
 
+static func is_valid_player(player: Player) -> bool:
+	return player and player.get_id() > 0
+
+
 func has_blob() -> bool:
 	return _blob_id != -1
+
 
 
 

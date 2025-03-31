@@ -10,6 +10,10 @@ signal server_started()
 signal blob_died(blob: Blob)
 
 
+signal before_tick()
+signal tick()
+signal after_tick()
+
 ## Client vars
 var _data_for_server := []
 
@@ -20,16 +24,16 @@ var unregistered_players := {}
 func start_server(port: int=50301) -> void:
 	var network := ENetMultiplayerPeer.new()
 	var err := network.create_server(port)
-	
+
 	if err != OK:
 		print("Failed to start server with error code " + str(err))
 		return
-	
+
 	print("Listening on port " + str(port))
 	multiplayer.set_multiplayer_peer(network)
 	multiplayer.peer_connected.connect(_on_Peer_connected)
 	multiplayer.peer_disconnected.connect(_on_Peer_disconnected)
-	
+
 	server_started.emit()
 
 
@@ -37,11 +41,11 @@ func join_server(ip: String, port: int, data_for_server: Array) -> void:
 	var network := ENetMultiplayerPeer.new()
 	var err := network.create_client(ip, port)
 	_data_for_server = data_for_server
-	
+
 	if err != OK:
 		print("Failed to join server with error code " + str(err))
 		return
-	
+
 	multiplayer.set_multiplayer_peer(network)
 	multiplayer.connected_to_server.connect(_on_Connected_to_server)
 	multiplayer.connection_failed.connect(_on_Connection_failed)
@@ -83,7 +87,7 @@ func _receive_game_data(game_info: Array) -> void:
 	var players_parent := get_players_parent()
 	for player_data in players_data:
 		_add_player(player_data, false)
-	
+
 	var blobs_data := game_info[1] as Array
 	var blobs_parent := get_blobs_parent()
 	for blob_data in blobs_data:
@@ -93,10 +97,10 @@ func _receive_game_data(game_info: Array) -> void:
 		var blob := packed_scene.instantiate() as Blob
 		blob.load_spawn_data(blob_data)
 		blobs_parent.add_child(blob, true)
-	
+
 	GameManager.load_gamemode(game_info[2])
 	GameManager.load_map(game_info[3])
-	
+
 	_game_loading_finished.rpc_id(1)
 
 
@@ -133,7 +137,7 @@ func get_game_info() -> Array:
 	for i in players.size():
 		var player: Player = players[i]
 		players_data.append(player.serialise())
-	
+
 	var blobs := Blob.get_blobs()
 	var blobs_data := []
 	for i in blobs.size():
@@ -149,7 +153,7 @@ func server_spawn_blob(scene_path: String, params: Dictionary={}) -> Blob:
 	params["id"] = new_blob.get_instance_id()
 	new_blob.load_spawn_data(params)
 	get_blobs_parent().add_child(new_blob, true)
-	
+
 	_add_blob.rpc_id(0, scene_path, params)
 	return new_blob
 
@@ -173,16 +177,18 @@ func get_blobs_parent() -> Node:
 
 
 func server_active() -> bool:
-	return (multiplayer.has_multiplayer_peer() and
-		multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED
+	return (multiplayer.has_multiplayer_peer()
+	and multiplayer.multiplayer_peer is ENetMultiplayerPeer
+	and multiplayer.multiplayer_peer.get_connection_status() == MultiplayerPeer.CONNECTION_CONNECTED
 	)
 
 
 func is_client() -> bool:
 	if not server_active():
 		return false
-	
+
 	return my_player_exists()
+
 
 
 func is_server() -> bool:

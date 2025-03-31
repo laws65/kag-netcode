@@ -22,20 +22,18 @@ var current_bounce_cooldown = 0
 
 var just_jumped := false
 
+
 func _rollback_tick(delta: float, tick: int, _is_fresh: bool) -> void:
 	cum_ticks += 1
-	if cum_ticks <= 120:
+	if cum_ticks <= 60:
 		return
-	delta = 1/60.0
-	if not is_my_blob() and not Multiplayer.is_server():
-		return
-		
+
 	if current_bounce_cooldown > 0 and is_on_floor():
 		current_bounce_cooldown -= 1
-	
+
 	NetworkedInput.set_time(tick)
 	NetworkedInput.set_target(get_player_id())
-	
+
 	var i_direction = NetworkedInput.get_input("movement")
 	var i_mouse = NetworkedInput.get_input("mouse")
 	var mouse_pos = global_position
@@ -45,7 +43,7 @@ func _rollback_tick(delta: float, tick: int, _is_fresh: bool) -> void:
 	if i_direction != null:
 		direction = i_direction.x
 		jump_pressed = i_direction.y < 0
-
+		mouse_pos = i_mouse
 
 	var facing = 1
 	if mouse_pos.x < position.x:
@@ -55,7 +53,7 @@ func _rollback_tick(delta: float, tick: int, _is_fresh: bool) -> void:
 			velocity.x *= -0.5
 		else:
 			velocity.x += ground_accel * direction * delta
-		
+
 		if direction == 0:
 			velocity.x = lerp(velocity.x, 0.0, ground_friction * delta)
 		if direction == facing:
@@ -67,7 +65,7 @@ func _rollback_tick(delta: float, tick: int, _is_fresh: bool) -> void:
 			velocity.x *= -0.2
 		else:
 			velocity.x += air_accel * direction * delta
-		
+
 		if direction == 0:
 			velocity.x = lerp(velocity.x, 0.0, ground_friction * delta)
 		if direction == facing:
@@ -80,7 +78,7 @@ func _rollback_tick(delta: float, tick: int, _is_fresh: bool) -> void:
 			just_jumped = true
 			current_bounce_cooldown = bounce_cooldown_time_ticks
 			velocity.y -= jump_force
-	
+
 	if just_jumped and jump_pressed and velocity.y < 0:
 		velocity.y += gravity * 0.5 * delta
 	else:
@@ -89,14 +87,15 @@ func _rollback_tick(delta: float, tick: int, _is_fresh: bool) -> void:
 			velocity.y = min(velocity.y, max_wall_scrape_speed)
 		else:
 			velocity.y += gravity * delta
-			
-	
+
 	move_and_slide()
-	
+
 	if is_on_floor():
 		if just_jumped:
 			velocity.x *= 0.75
 		just_jumped = false
+
+
 
 
 var cum_ticks := 0

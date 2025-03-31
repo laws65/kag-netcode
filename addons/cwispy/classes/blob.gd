@@ -12,10 +12,10 @@ var _player_id := -1
 
 func load_spawn_data(params: Dictionary) -> void:
 	name = str(params["id"])
-	
+
 	for prop_name in params:
 		if prop_name == "id": continue
-		
+
 		var split := prop_name.split(":") as PackedStringArray
 		var node_path := "."
 		var node_prop := ""
@@ -32,7 +32,7 @@ func get_spawn_data() -> Dictionary:
 		"path": scene_file_path,
 		"id": get_id(),
 	}
-	
+
 	for prop_name in spawn_props:
 		var split := prop_name.split(":") as PackedStringArray
 		var node_path := "."
@@ -43,7 +43,7 @@ func get_spawn_data() -> Dictionary:
 			node_path = split[0]
 			node_prop = split[1]
 		spawn_data[prop_name] = get_node(node_path).get(node_prop)
-	
+
 	return spawn_data
 
 
@@ -63,6 +63,10 @@ static func get_blob_by_id(blob_id: int) -> Blob:
 	if blob_id > 0 and Multiplayer.get_blobs_parent().has_node(str(blob_id)):
 		return Multiplayer.get_blobs_parent().get_node(str(blob_id)) as Blob
 	return null
+
+
+static func is_valid_blob(blob: Blob) -> bool:
+	return blob and blob.get_id() > 0
 
 
 func has_player() -> bool:
@@ -99,7 +103,7 @@ func _set_player_id(player_id: int) -> void:
 func set_player_id(player_id: int) -> void:
 	var old_id := _player_id
 	_player_id = player_id
-	
+
 	player_id_changed.emit(old_id, player_id)
 
 
@@ -151,5 +155,5 @@ func get_snapshot() -> Dictionary:
 			node_path = split[0]
 			node_prop = split[1]
 		snapshot[prop_name] = get_node(node_path).get(node_prop)
-	
+
 	return snapshot

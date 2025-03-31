@@ -34,7 +34,8 @@ func _post_tick(_delta: float, tick: int) -> void:
 
 
 func _sync_blobs() -> void:
-	# TODO add client side prediction code
+	# TODO fix client side prediction code
+	# TODO rewatch -> https://www.youtube.com/watch?v=W3aieHjyNvw&t=1529s&ab_channel=GameDevelopersConference
 	# TODO consider having a 1 input buffer for client inputs
 	# TODO investigate why it takes so long to quit game
 	var rtt := NetworkTime.remote_rtt * 1000

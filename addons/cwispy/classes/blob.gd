@@ -10,6 +10,14 @@ var _player_id := -1
 @export var snapshot_props: Array[String]
 
 
+func _ready() -> void:
+	NetworkTime.on_tick.connect(_rollback_tick)
+
+
+func _rollback_tick(delta: float, tick: int, is_fresh: bool = true) -> void:
+	pass
+
+
 func load_spawn_data(params: Dictionary) -> void:
 	name = str(params["id"])
 

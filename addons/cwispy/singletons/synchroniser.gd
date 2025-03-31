@@ -8,23 +8,39 @@ var RENDER_TIME_TICK_DELAY = 1
 
 
 func _ready() -> void:
-	process_physics_priority = 99
+	NetworkTime.after_tick.connect(_post_tick)
+	#NetworkTime.on_tick.connect(_on_tick)
+
+
+func _post_tick(_delta: float, tick: int) -> void:
+	if not Multiplayer.is_server() and not Multiplayer.is_client(): return
+
+	if Multiplayer.is_client():
+		_sync_blobs()
+		#_interpolate_blobs()
+		return
+
+	var snapshot := _create_world_snapshot(tick)
+	_insert_snapshot_into_buffer(snapshot)
+
+	if Multiplayer.is_server():
+		#print("broadcasting with time " + str(NetworkTime.tick))
+		_broadcast_snapshot(snapshot)
 
 
 func _physics_process(delta: float) -> void:
+	return
 	if not Multiplayer.is_server() and not Multiplayer.is_client(): return
 
 	while _state_snapshots.size() > 20:
 		_state_snapshots.pop_back()
 	if Multiplayer.is_client():
-		_sync_blobs()
+		#_sync_blobs()
 		#_interpolate_blobs()
 		return
-	if Multiplayer.is_server():
-		_tick_world() # TODO replace with automatically calling blob tick
 
 	var snapshot := _create_world_snapshot(NetworkTime.tick)
-	_state_snapshots.push_front(snapshot)
+	_insert_snapshot_into_buffer(snapshot)
 
 	if Multiplayer.is_server():
 		#print("broadcasting with time " + str(NetworkTime.tick))
@@ -62,9 +78,9 @@ func _physics_process(delta: float) -> void:
 
 func _sync_blobs() -> void:
 	# TODO add per render frame interpolation of blobs (prolly have to rewrite physics interpolation)
-	var rtt := Clock.get_rtt_conservative()
+	var rtt := NetworkTime.remote_rtt * 1000
 	var half_tick_rtt: int = ceil(
-		rtt*0.5/(1000/float(Engine.get_physics_ticks_per_second()))
+		rtt*0.5/float((1000/float(Engine.get_physics_ticks_per_second())))
 	)
 	var render_tick = NetworkTime.tick - RENDER_TIME_TICK_DELAY - half_tick_rtt
 
@@ -73,6 +89,7 @@ func _sync_blobs() -> void:
 		var i_timestamp := _state_snapshots[i]["time"] as int
 		if render_tick == i_timestamp:
 			var snapshot: Dictionary = _state_snapshots[i]
+			print("loading tick ", render_tick)
 			_load_snapshot(snapshot)
 			return
 
@@ -91,6 +108,7 @@ func _sync_blobs() -> void:
 	var ticks_to_simulate := render_tick - recent_snapshot_before_render_tick["time"] as int
 	var player_inputs := recent_snapshot_before_render_tick["inputs"] as Dictionary[int, Dictionary]
 	while ticks_to_simulate > 0:
+		print("simulating tick ", render_tick - ticks_to_simulate + 1,)
 		var blobs_to_simulate := []
 		for blob_id in recent_snapshot_before_render_tick["blobs"].keys():
 			blobs_to_simulate.push_back(blob_id)
@@ -145,13 +163,18 @@ func _get_interpolated_snapshot(old_snapshot: Dictionary, new_snapshot: Dictiona
 	return out
 
 
-func _tick_world() -> void:
-	var blobs := Blob.get_blobs()
-	for blob in blobs:
-		blob._rollback_tick(1/float(Engine.get_physics_ticks_per_second()), NetworkTime.tick, true)
-
-
 func _insert_snapshot_into_buffer(snapshot: Dictionary) -> void:
+	while _state_snapshots.size() > 20 + 1:
+		_state_snapshots.pop_back()
+
+	if _state_snapshots.is_empty():
+		_state_snapshots.push_front(snapshot)
+		return
+
+	if _state_snapshots[0]["time"] < snapshot["time"]:
+		_state_snapshots.push_front(snapshot)
+		return
+
 	for i in _state_snapshots.size():
 		var i_snapshot_time := _state_snapshots[i]["time"] as int
 		if i_snapshot_time == snapshot["time"]:

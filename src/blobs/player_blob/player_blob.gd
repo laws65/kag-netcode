@@ -23,7 +23,12 @@ var current_bounce_cooldown = 0
 var just_jumped := false
 
 
-func _rollback_tick(delta: float, tick: int, _is_fresh: bool) -> void:
+func _rollback_tick(delta: float, tick: int, _is_fresh: bool = true) -> void:
+	if not has_player():
+		return
+	if Multiplayer.is_client():
+		return
+
 	cum_ticks += 1
 	if cum_ticks <= 60:
 		return

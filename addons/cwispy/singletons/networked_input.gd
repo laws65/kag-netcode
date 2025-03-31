@@ -7,17 +7,17 @@ var _input_buffer: Dictionary[int, Array]
 var _target_input_time := -1
 var _target_player_id := -1
 
-
-func _ready() -> void:
-	process_physics_priority = -1
-
 var collect_input_function: Callable = func():
 	return {"movement": Input.get_vector("left", "right", "up", "down"), "mouse": get_tree().root.get_node("/root/Main/Game").get_global_mouse_position()}
 
 
-func _physics_process(_delta: float) -> void:
+func _ready() -> void:
+	NetworkTime.before_tick.connect(_pre_tick)
+
+
+func _pre_tick(_delta: float, tick: int) -> void:
 	if Multiplayer.is_client():
-		_broadcast_and_save_inputs(NetworkTime.tick)
+		_broadcast_and_save_inputs(tick)
 
 
 func _broadcast_and_save_inputs(tick: int) -> void:

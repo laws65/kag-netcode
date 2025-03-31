@@ -3,6 +3,29 @@ extends Node
 var ping_ms := -1
 var rtt_buffer := []
 
+signal pre_tick(tick: int)
+signal on_tick(tick: int)
+signal post_tick(tick: int)
+
+
+@onready var frame_time: float = 1/float(Engine.get_physics_ticks_per_second())
+
+var time_since_last_frame := 0.0
+var _tick := 0
+
+func _process(delta: float) -> void:
+	if Multiplayer.is_server():
+		time_since_last_frame += frame_time
+		#while time_since_last_frame > frame_time:
+		#	_tick += 1
+		#	_execute_tick(_tick)
+
+
+func _execute_tick(tick: int) -> void:
+	pre_tick.emit(tick)
+	on_tick.emit(tick)
+	post_tick.emit(tick)
+
 
 func _physics_process(delta: float) -> void:
 	if not Multiplayer.server_active(): return

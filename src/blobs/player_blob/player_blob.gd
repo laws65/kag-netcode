@@ -29,9 +29,13 @@ func _rollback_tick(delta: float, tick: int, is_fresh: bool = true) -> void:
 	if Multiplayer.is_client() and is_fresh and is_my_blob():
 		return
 
-	if Multiplayer.is_client():
-		print(tick)
+	#if Multiplayer.is_client():
+	#	print(tick)
 
+	var _velocity = velocity
+	velocity = Vector2.ZERO
+	move_and_slide()
+	velocity = _velocity
 	cum_ticks += 1
 	if cum_ticks <= 60:
 		return

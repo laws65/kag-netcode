@@ -70,9 +70,7 @@ func _sync_blobs() -> void:
 	var player_inputs := recent_snapshot_before_render_tick["inputs"] as Dictionary[int, Dictionary]
 	while ticks_to_simulate > 0:
 		#print("simulating tick ", render_tick - ticks_to_simulate + 1,)
-		var blobs_to_simulate := []
-		for blob_id in recent_snapshot_before_render_tick["blobs"].keys():
-			blobs_to_simulate.push_back(blob_id)
+		var blobs_to_simulate := recent_snapshot_before_render_tick["blobs"].keys() as Array
 
 		for player_id in player_inputs.keys():
 			var player := Player.get_player_by_id(player_id)
@@ -82,10 +80,7 @@ func _sync_blobs() -> void:
 			if not Blob.is_valid_blob(blob):
 				continue
 
-			blob.velocity = Vector2.ZERO
-			blob.move_and_slide()
 			blob.load_snapshot(recent_snapshot_before_render_tick["blobs"][blob.get_id()])
-
 			NetworkedInput._add_inputs_to_buffer(player_inputs[player_id], render_tick, player_id)
 			blob._rollback_tick(NetworkTime.ticktime, render_tick - ticks_to_simulate + 1, false)
 			NetworkedInput._remove_player_inputs(player_id)
@@ -94,9 +89,6 @@ func _sync_blobs() -> void:
 
 		for blob_id in blobs_to_simulate:
 			var blob := Blob.get_blob_by_id(blob_id)
-			var velocity := blob.velocity
-			blob.velocity = Vector2.ZERO
-			blob.move_and_slide()
 			blob.load_snapshot(recent_snapshot_before_render_tick["blobs"][blob.get_id()])
 			blob._rollback_tick(NetworkTime.ticktime, render_tick - ticks_to_simulate + 1, false)
 

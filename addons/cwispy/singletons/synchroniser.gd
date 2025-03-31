@@ -3,20 +3,25 @@ extends Node
 
 var _state_snapshots: Array[Dictionary]
 
+signal after_tick
 
 var RENDER_TIME_TICK_DELAY = 1
 
 
 func _ready() -> void:
 	NetworkTime.after_tick.connect(_post_tick)
+	NetworkTime.on_tick.connect(_tick)
 	#NetworkTime.on_tick.connect(_on_tick)
 
+
+func _tick(_delta: float, tick: int) -> void:
+	if Multiplayer.is_client():
+		_sync_blobs()
 
 func _post_tick(_delta: float, tick: int) -> void:
 	if not Multiplayer.is_server() and not Multiplayer.is_client(): return
 
 	if Multiplayer.is_client():
-		_sync_blobs()
 		#_interpolate_blobs()
 		return
 
@@ -28,58 +33,12 @@ func _post_tick(_delta: float, tick: int) -> void:
 		_broadcast_snapshot(snapshot)
 
 
-func _physics_process(delta: float) -> void:
-	return
-	if not Multiplayer.is_server() and not Multiplayer.is_client(): return
-
-	while _state_snapshots.size() > 20:
-		_state_snapshots.pop_back()
-	if Multiplayer.is_client():
-		#_sync_blobs()
-		#_interpolate_blobs()
-		return
-
-	var snapshot := _create_world_snapshot(NetworkTime.tick)
-	_insert_snapshot_into_buffer(snapshot)
-
-	if Multiplayer.is_server():
-		#print("broadcasting with time " + str(NetworkTime.tick))
-		_broadcast_snapshot(snapshot)
-	return
-	if not Multiplayer.is_client():
-		return
-
-	if _state_snapshots.size() > 20:
-		var target_rollback_time := _state_snapshots[5]["time"] as int
-		_rollback_to(target_rollback_time)
-		var inputs := NetworkedInput.collect_input_function.call()
-		var timestamp = NetworkTime.tick
-		NetworkedInput._receive_client_inputs.rpc_id(1, inputs, timestamp)
-		NetworkedInput._add_inputs_to_buffer(inputs, timestamp, multiplayer.get_unique_id())
-		#print("rolling back to " + str(target_rollback_time) + " : current time " + str(NetworkTime.tick))
-		var current_tick = target_rollback_time
-		while current_tick != NetworkTime.tick:
-			current_tick += 1
-			for blob in Blob.get_blobs():
-				blob._rollback_tick(1/float(Engine.get_physics_ticks_per_second()), current_tick, false)
-			_insert_snapshot_into_buffer(_create_world_snapshot(current_tick))
-
-		while _state_snapshots.size() > 10:
-			_state_snapshots.pop_back()
-		#print("rollback complete " + str(NetworkTime.tick))
-		var rolled_back_reconciliated_snapshot := _create_world_snapshot(NetworkTime.tick)
-		for blob_id in rolled_back_reconciliated_snapshot["blobs"].keys():
-			if blob_id in snapshot["blobs"].keys():
-				pass
-				#print(snapshot["blobs"][blob_id]["position"] - rolled_back_reconciliated_snapshot["blobs"][blob_id]["position"])
-				#print(str(snapshot["blobs"][blob_id]["position"]) + " : " + str(rolled_back_reconciliated_snapshot["blobs"][blob_id]["position"]))
-		#_load_snapshot(snapshot)
-
-
 func _sync_blobs() -> void:
-	# TODO add per render frame interpolation of blobs (prolly have to rewrite physics interpolation)
+	# TODO add client side prediction code, clean up remote client prediction code
+	# TODO investigate why it takes so long to quit game
 	var rtt := NetworkTime.remote_rtt * 1000
 	var half_tick_rtt: int = ceil(
+		# TODO rewrite this using NetworkTime.ticktime
 		rtt*0.5/float((1000/float(Engine.get_physics_ticks_per_second())))
 	)
 	var render_tick = NetworkTime.tick - RENDER_TIME_TICK_DELAY - half_tick_rtt
@@ -89,11 +48,12 @@ func _sync_blobs() -> void:
 		var i_timestamp := _state_snapshots[i]["time"] as int
 		if render_tick == i_timestamp:
 			var snapshot: Dictionary = _state_snapshots[i]
-			print("loading tick ", render_tick)
+			#print("loading tick ", render_tick)
 			_load_snapshot(snapshot)
+			Synchroniser.after_tick.emit()
 			return
 
-	# find latest snapshot and simulate until render_tick
+	# otherwise find latest snapshot and simulate until render_tick
 	var recent_snapshot_before_render_tick: Dictionary = {"time":-1}
 	for i in _state_snapshots.size():
 		var snapshot: Dictionary = _state_snapshots[i]
@@ -106,9 +66,10 @@ func _sync_blobs() -> void:
 		print("Couldn't even find snapshot, returning")
 		return
 	var ticks_to_simulate := render_tick - recent_snapshot_before_render_tick["time"] as int
+
 	var player_inputs := recent_snapshot_before_render_tick["inputs"] as Dictionary[int, Dictionary]
 	while ticks_to_simulate > 0:
-		print("simulating tick ", render_tick - ticks_to_simulate + 1,)
+		#print("simulating tick ", render_tick - ticks_to_simulate + 1,)
 		var blobs_to_simulate := []
 		for blob_id in recent_snapshot_before_render_tick["blobs"].keys():
 			blobs_to_simulate.push_back(blob_id)
@@ -119,14 +80,14 @@ func _sync_blobs() -> void:
 				continue
 			var blob := player.get_blob()
 			if not Blob.is_valid_blob(blob):
-				return
+				continue
 
 			blob.velocity = Vector2.ZERO
 			blob.move_and_slide()
 			blob.load_snapshot(recent_snapshot_before_render_tick["blobs"][blob.get_id()])
 
 			NetworkedInput._add_inputs_to_buffer(player_inputs[player_id], render_tick, player_id)
-			blob._rollback_tick(1/float(Engine.get_physics_frames()), render_tick - ticks_to_simulate + 1, false)
+			blob._rollback_tick(NetworkTime.ticktime, render_tick - ticks_to_simulate + 1, false)
 			NetworkedInput._remove_player_inputs(player_id)
 
 			blobs_to_simulate.erase(blob.get_id())
@@ -137,13 +98,15 @@ func _sync_blobs() -> void:
 			blob.velocity = Vector2.ZERO
 			blob.move_and_slide()
 			blob.load_snapshot(recent_snapshot_before_render_tick["blobs"][blob.get_id()])
-			blob._rollback_tick(1/float(Engine.get_physics_frames()), render_tick - ticks_to_simulate + 1, false)
+			blob._rollback_tick(NetworkTime.ticktime, render_tick - ticks_to_simulate + 1, false)
 
 		if ticks_to_simulate > 1:
 			var snapshot := _create_world_snapshot(render_tick - ticks_to_simulate + 1)
 			_insert_snapshot_into_buffer(snapshot)
 
 		ticks_to_simulate -= 1
+
+		after_tick.emit()
 
 
 func _get_interpolated_snapshot(old_snapshot: Dictionary, new_snapshot: Dictionary, interpolation_delta: float) -> Dictionary:
@@ -164,6 +127,7 @@ func _get_interpolated_snapshot(old_snapshot: Dictionary, new_snapshot: Dictiona
 
 
 func _insert_snapshot_into_buffer(snapshot: Dictionary) -> void:
+	# TODO write algorithm to find correct index, to prevent slowdowns for large buffer sizes
 	while _state_snapshots.size() > 20 + 1:
 		_state_snapshots.pop_back()
 

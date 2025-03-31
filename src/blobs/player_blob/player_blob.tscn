@@ -1,8 +1,9 @@
-[gd_scene load_steps=5 format=3 uid="uid://dkiva5p8qrip2"]
+[gd_scene load_steps=6 format=3 uid="uid://dkiva5p8qrip2"]
 
 [ext_resource type="PackedScene" uid="uid://3m16pqlxta3h" path="res://src/blobs/blob/blob.tscn" id="1_0b5ix"]
 [ext_resource type="Script" uid="uid://bqv3nvdy7nb1h" path="res://src/blobs/player_blob/player_blob.gd" id="2_oinls"]
 [ext_resource type="Texture2D" uid="uid://brs8ipgxhu0vx" path="res://icon.svg" id="3_oj3xq"]
+[ext_resource type="Script" uid="uid://buscm2narplb0" path="res://addons/cwispy/classes/smoother_2d.gd" id="4_3tjr0"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_oinls"]
 size = Vector2(12, 18)
@@ -20,3 +21,9 @@ shape = SubResource("RectangleShape2D_oinls")
 position = Vector2(0, -9)
 scale = Vector2(0.094, 0.141)
 texture = ExtResource("3_oj3xq")
+
+[node name="Smoother2D" type="Node" parent="." index="2" node_paths=PackedStringArray("authority", "targets")]
+script = ExtResource("4_3tjr0")
+authority = NodePath("..")
+targets = [NodePath("../Sprite2D")]
+metadata/_custom_type_script = "uid://buscm2narplb0"

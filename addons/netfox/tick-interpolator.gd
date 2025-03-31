@@ -15,12 +15,12 @@ class_name TickInterpolator
 ## Properties to interpolate.
 @export var properties: Array[String]
 
-## If enabled, takes a snapshot immediately upon instantiation, instead of 
-## waiting for the first network tick. Useful for objects that start moving 
+## If enabled, takes a snapshot immediately upon instantiation, instead of
+## waiting for the first network tick. Useful for objects that start moving
 ## instantly, like projectiles.
 @export var record_first_state: bool = true
 
-## Toggle automatic state recording. When enabled, the node will take a new 
+## Toggle automatic state recording. When enabled, the node will take a new
 ## snapshot on every network tick. When disabled, call [member push_state]
 ## whenever properties are updated.
 @export var enable_recording: bool = true
@@ -41,7 +41,7 @@ func process_settings():
 	_property_cache = PropertyCache.new(root)
 	_property_entries.clear()
 	_interpolators.clear()
-	
+
 	_state_from = {}
 	_state_to = {}
 
@@ -53,7 +53,7 @@ func process_settings():
 ## Add a property to interpolate.
 ## [br][br]
 ## Settings will be automatically updated. The [param node] may be a string or
-## [NodePath] pointing to a node, or an actual [Node] instance. If the given 
+## [NodePath] pointing to a node, or an actual [Node] instance. If the given
 ## property is already interpolated, this method does nothing.
 func add_property(node: Variant, property: String):
 	var property_path := PropertyEntry.make_path(root, node, property)
@@ -74,7 +74,7 @@ func can_interpolate() -> bool:
 ## Record current state for interpolation.
 ## [br][br]
 ## Note that this will rotate the states, so the previous target becomes the new
-## starting point for the interpolation. This is automatically called if 
+## starting point for the interpolation. This is automatically called if
 ## [code]enable_recording[/code] is true.
 func push_state():
 	_state_from = _state_to
@@ -105,7 +105,7 @@ func _get_configuration_warnings():
 		func(node, prop):
 			add_property(node, prop)
 	)
-	
+
 func _connect_signals():
 	NetworkTime.before_tick_loop.connect(_before_tick_loop)
 	NetworkTime.after_tick_loop.connect(_after_tick_loop)
@@ -160,10 +160,10 @@ func _interpolate(from: Dictionary, to: Dictionary, f: float):
 
 	for property in from:
 		if not to.has(property): continue
-		
+
 		var property_entry = _property_cache.get_entry(property)
 		var a = from[property]
 		var b = to[property]
 		var interpolate = _interpolators[property] as Callable
-		
+
 		property_entry.set_value(interpolate.call(a, b, f))

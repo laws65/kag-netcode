@@ -29,10 +29,10 @@ NetworkPerformance="*res://addons/netfox/network-performance.gd"
 WindowTiler="*res://addons/netfox.extras/window-tiler.gd"
 NetworkedInput="*res://addons/cwispy/singletons/networked_input.gd"
 Synchroniser="*res://addons/cwispy/singletons/synchroniser.gd"
-Clock="*res://addons/cwispy/singletons/clock.gd"
 
 [display]
 
+window/size/mode=4
 window/vsync/vsync_mode=0
 
 [editor_plugins]
@@ -72,8 +72,8 @@ secondary={
 logging/netfox_extras_log_level=4
 logging/log_level=4
 logging/netfox_log_level=4
-time/sync_to_physics=true
 rollback/enabled=false
+time/sync_to_physics=true
 
 [physics]
 

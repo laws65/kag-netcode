@@ -7,6 +7,9 @@ signal after_tick
 
 var RENDER_TIME_TICK_DELAY = 1
 
+var client_prediction_enabled := true
+var remote_client_prediction_enabled := true
+
 
 func _ready() -> void:
 	NetworkTime.after_tick.connect(_post_tick)
@@ -17,6 +20,7 @@ func _ready() -> void:
 func _tick(_delta: float, tick: int) -> void:
 	if Multiplayer.is_client():
 		_sync_blobs()
+
 
 func _post_tick(_delta: float, tick: int) -> void:
 	if not Multiplayer.is_server() and not Multiplayer.is_client(): return
@@ -48,11 +52,13 @@ func _sync_blobs() -> void:
 	# try to directly load snapshot if available
 	for i in _state_snapshots.size():
 		var i_timestamp := _state_snapshots[i]["time"] as int
+
 		if render_tick == i_timestamp:
 			var snapshot: Dictionary = _state_snapshots[i]
 			#print("loading tick ", render_tick)
 			_load_snapshot(snapshot)
-			_attempt_client_prediction_from(render_tick, NetworkTime.tick)
+			if client_prediction_enabled:
+				_attempt_client_prediction_from(render_tick, NetworkTime.tick)
 			Synchroniser.after_tick.emit()
 			return
 
@@ -77,12 +83,19 @@ func _sync_blobs() -> void:
 		var simulated_render_tick: int = render_tick - ticks_to_simulate + 1
 		for blob_id in blobs_to_simulate:
 			var blob := Blob.get_blob_by_id(blob_id)
+			if not Blob.is_valid_blob(blob):
+				# BUG figure out why this check is needed
+				continue
 			blob.load_snapshot(recent_snapshot_before_render_tick["blobs"][blob.get_id()])
+			var has_correct_input := false
+
 			if blob.has_player():
-				var player_id := blob.get_player_id()
-				var inputs := player_inputs[player_id]
-				NetworkedInput._add_inputs_to_buffer(player_inputs[player_id], render_tick, player_id)
-				blob._rollback_tick(NetworkTime.ticktime, simulated_render_tick, false)
+				if remote_client_prediction_enabled and not (client_prediction_enabled and blob.is_my_blob()):
+					var player_id := blob.get_player_id()
+					var inputs := player_inputs[player_id]
+					#print("here simulating ", simulated_render_tick, " : ", NetworkTime.tick)
+					NetworkedInput._add_inputs_to_buffer(player_inputs[player_id], player_id)
+					blob._rollback_tick(NetworkTime.ticktime, simulated_render_tick, false)
 			else:
 				blob._rollback_tick(NetworkTime.ticktime, simulated_render_tick, false)
 
@@ -92,25 +105,9 @@ func _sync_blobs() -> void:
 
 		ticks_to_simulate -= 1
 
-	_attempt_client_prediction_from(render_tick, NetworkTime.tick)
+	if client_prediction_enabled:
+		_attempt_client_prediction_from(render_tick, NetworkTime.tick)
 	after_tick.emit()
-
-
-func _get_interpolated_snapshot(old_snapshot: Dictionary, new_snapshot: Dictionary, interpolation_delta: float) -> Dictionary:
-	var out := {"blobs": {}, "authority": false, "time": new_snapshot["time"]}
-
-	for blob_id in new_snapshot["blobs"].keys():
-		if blob_id in old_snapshot["blobs"].keys():
-			var blob_snapshot = {}
-			for prop in new_snapshot["blobs"][blob_id]:
-				if prop == "position":
-					blob_snapshot["position"] = lerp(old_snapshot["blobs"][blob_id]["position"], new_snapshot["blobs"][blob_id]["position"], interpolation_delta)
-			out["blobs"][blob_id] = blob_snapshot
-		else:
-			out["blobs"][blob_id] = new_snapshot["blobs"][blob_id]
-
-
-	return out
 
 
 func _insert_snapshot_into_buffer(snapshot: Dictionary) -> void:
@@ -136,6 +133,7 @@ func _insert_snapshot_into_buffer(snapshot: Dictionary) -> void:
 		if snapshot["time"] > i_snapshot_time:
 			_state_snapshots.insert(i, snapshot)
 			return
+
 	_state_snapshots.push_back(snapshot)
 
 
@@ -150,7 +148,9 @@ func _load_snapshot(snapshot: Dictionary) -> void:
 	for blob_id in snapshot["blobs"].keys():
 		var blob_snapshot := snapshot["blobs"][blob_id] as Dictionary
 		var blob := Blob.get_blob_by_id(blob_id)
-		blob.load_snapshot(blob_snapshot)
+		if Blob.is_valid_blob(blob):
+			# BUG figure out why this check is needed
+			blob.load_snapshot(blob_snapshot)
 
 
 func _broadcast_snapshot(snapshot: Dictionary) -> void:
@@ -187,7 +187,6 @@ func _create_world_snapshot(time: int) -> Dictionary:
 
 
 func _attempt_client_prediction_from(from_tick: int, to_tick: int) -> void:
-	return
 	assert(from_tick <= to_tick)
 
 	if not Multiplayer.is_client(): return
@@ -197,6 +196,7 @@ func _attempt_client_prediction_from(from_tick: int, to_tick: int) -> void:
 
 	var current_tick := from_tick
 	while current_tick <= to_tick:
+		#print("simulating tick ", current_tick, " : ", NetworkTime.tick)
 		blob._rollback_tick(NetworkTime.ticktime, current_tick, false)
 
 

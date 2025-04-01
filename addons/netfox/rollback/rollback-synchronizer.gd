@@ -41,7 +41,7 @@ var full_state_interval: int = 24
 ## more often acknowledging received states. To avoid introducing hickups, these
 ## are sent unreliably.
 ## [br][br]
-## If set to 0, diff states will never be acknowledged. If set to 1, all diff 
+## If set to 0, diff states will never be acknowledged. If set to 1, all diff
 ## states will be acknowledged. If set higher, ack's will be sent regularly, but
 ## not for every diff state.
 ## [br][br]
@@ -108,7 +108,7 @@ func process_settings():
 
 	_nodes.clear()
 	_record_state_property_entries.clear()
-	
+
 	_states.clear()
 	_inputs.clear()
 	_ackd_state.clear()
@@ -129,7 +129,7 @@ func process_settings():
 	for property in state_properties:
 		var property_entry = _property_cache.get_entry(property)
 		_record_state_property_entries.push_back(property_entry)
-	
+
 	process_authority()
 
 	# Gather all rollback-aware nodes to simulate during rollbacks
@@ -137,7 +137,7 @@ func process_settings():
 	_nodes.push_front(root)
 	_nodes = _nodes.filter(func(it): return NetworkRollback.is_rollback_aware(it))
 	_nodes.erase(self)
-	
+
 	_is_initialized = true
 
 ## Process settings based on authority.
@@ -168,7 +168,7 @@ func process_authority():
 ## Add a state property.
 ## [br][br]
 ## Settings will be automatically updated. The [param node] may be a string or
-## [NodePath] pointing to a node, or an actual [Node] instance. If the given 
+## [NodePath] pointing to a node, or an actual [Node] instance. If the given
 ## property is already tracked, this method does nothing.
 func add_state(node: Variant, property: String):
 	var property_path := PropertyEntry.make_path(root, node, property)
@@ -182,7 +182,7 @@ func add_state(node: Variant, property: String):
 ## Add an input property.
 ## [br][br]
 ## Settings will be automatically updated. The [param node] may be a string or
-## [NodePath] pointing to a node, or an actual [Node] instance. If the given 
+## [NodePath] pointing to a node, or an actual [Node] instance. If the given
 ## property is already tracked, this method does nothing.
 func add_input(node: Variant, property: String):
 	var property_path := PropertyEntry.make_path(root, node, property)
@@ -265,24 +265,24 @@ func _get_configuration_warnings():
 	# Explore state and input properties
 	if not root:
 		return ["No valid root node found!"]
-	
+
 	var result = []
 	result.append_array(_NetfoxEditorUtils.gather_properties(root, "_get_rollback_state_properties",
 		func(node, prop):
 			add_state(node, prop)
 	))
-	
+
 	result.append_array(_NetfoxEditorUtils.gather_properties(root, "_get_rollback_input_properties",
 		func(node, prop):
 			add_input(node, prop)
 	))
-	
+
 	return result
 
 func _enter_tree():
 	if Engine.is_editor_hint():
 		return
-	
+
 	if not NetworkTime.is_initial_sync_done():
 		# Wait for time sync to complete
 		await NetworkTime.after_sync
@@ -292,7 +292,7 @@ func _enter_tree():
 func _exit_tree():
 	if Engine.is_editor_hint():
 		return
-	
+
 	_is_initialized = false
 	_disconnect_signals()
 
@@ -318,11 +318,11 @@ func _prepare_tick(tick: int):
 	_has_input = _retrieved_tick != -1
 	_input_tick = _retrieved_tick
 	_is_predicted_tick = not _inputs.has(tick)
-	
+
 	# Reset the set of simulated and ignored nodes
 	_simset.clear()
 	_skipset.clear()
-	
+
 	# Gather nodes that can be simulated
 	for node in _nodes:
 		if _can_simulate(node, tick):
@@ -371,17 +371,17 @@ func _record_tick(tick: int):
 			if _can_simulate(property.node, tick - 1) and not _skipset.has(property.node):
 				# Only broadcast if we've simulated the node
 				full_state[property.to_string()] = property.get_value()
-			
+
 		_on_transmit_state.emit(full_state, tick)
 
 		if full_state.size() > 0:
 			_latest_state_tick = max(_latest_state_tick, tick)
 			_states[tick] = PropertySnapshot.merge(_states.get(tick, {}), full_state)
-			
+
 			if not NetworkRollback.enable_diff_states:
 				# Broadcast new full state
 				_submit_full_state.rpc(full_state, tick)
-				
+
 				NetworkPerformance.push_full_state_broadcast(full_state)
 				NetworkPerformance.push_sent_state_broadcast(full_state)
 			elif full_state_interval > 0 and tick > _next_full_state_tick:
@@ -389,30 +389,30 @@ func _record_tick(tick: int):
 				_logger.trace("Broadcasting full state for tick %d", [tick])
 				_submit_full_state.rpc(full_state, tick)
 				_next_full_state_tick = tick + full_state_interval
-				
+
 				NetworkPerformance.push_full_state_broadcast(full_state)
 				NetworkPerformance.push_sent_state_broadcast(full_state)
 			else:
 				for peer in multiplayer.get_peers():
 					NetworkPerformance.push_full_state(full_state)
-					
+
 					# Peer hasn't received a full state yet, can't send diffs
 					if not _ackd_state.has(peer):
 						_submit_full_state.rpc_id(peer, full_state, tick)
 						NetworkPerformance.push_sent_state(full_state)
 						continue
-					
+
 					# History doesn't have reference tick?
 					var reference_tick = _ackd_state[peer]
 					if not _states.has(reference_tick):
 						_submit_full_state.rpc_id(peer, full_state, tick)
 						NetworkPerformance.push_sent_state(full_state)
 						continue
-					
+
 					# Prepare diff and send
 					var reference_state = _get_history(_states, reference_tick)
 					var diff_state = PropertySnapshot.make_patch(reference_state, full_state)
-					
+
 					if diff_state.size() == full_state.size():
 						# State is completely different, send full state
 						_submit_full_state.rpc_id(peer, full_state, tick)
@@ -434,7 +434,7 @@ func _record_tick(tick: int):
 			var record_state = PropertySnapshot.extract(record_properties)
 
 			_states[tick] = PropertySnapshot.merge(merge_state, record_state)
-	
+
 	# Push metrics
 	NetworkPerformance.push_rollback_nodes_simulated(_simset.size())
 
@@ -506,26 +506,26 @@ func _get_history(buffer: Dictionary, tick: int) -> Dictionary:
 	if tick < earliest_tick:
 		_retrieved_tick = earliest_tick
 		return buffer[earliest_tick]
-	
+
 	if tick > latest_tick:
 		_retrieved_tick = latest_tick
 		return buffer[latest_tick]
-	
+
 	var before = buffer.keys() \
 		.filter(func (key): return key < tick) \
 		.max()
-	
+
 	_retrieved_tick = before
 	return buffer[before]
 
 func _sanitize_by_authority(snapshot: Dictionary, sender: int) -> Dictionary:
 	var sanitized := {}
-	
+
 	for property in snapshot:
 		var property_entry := _property_cache.get_entry(property)
 		var value = snapshot[property]
 		var authority := property_entry.node.get_multiplayer_authority()
-		
+
 		if authority == sender:
 			sanitized[property] = value
 		else:
@@ -533,7 +533,7 @@ func _sanitize_by_authority(snapshot: Dictionary, sender: int) -> Dictionary:
 				"Received data for property %s, owned by %s, from sender %s",
 				[ property, authority, sender ]
 			)
-	
+
 	return sanitized
 
 @rpc("any_peer", "unreliable", "call_remote")
@@ -541,7 +541,7 @@ func _submit_input(input: Dictionary, tick: int):
 	if not _is_initialized:
 		# Settings not processed yet
 		return
-	
+
 	var sender = multiplayer.get_remote_sender_id()
 	var sanitized = _sanitize_by_authority(input, sender)
 
@@ -578,7 +578,7 @@ func _submit_full_state(state: Dictionary, tick: int):
 
 	var sender = multiplayer.get_remote_sender_id()
 	var sanitized = _sanitize_by_authority(state, sender)
-	
+
 	if sanitized.is_empty():
 		# State is completely invalid
 		_logger.warning("Received invalid state from %s for tick %s", [sender, tick])
@@ -586,7 +586,7 @@ func _submit_full_state(state: Dictionary, tick: int):
 
 	_states[tick] = PropertySnapshot.merge(_states.get(tick, {}), sanitized)
 	_latest_state_tick = tick
-		
+
 	if NetworkRollback.enable_diff_states:
 		_ack_full_state.rpc_id(get_multiplayer_authority(), tick)
 
@@ -623,7 +623,7 @@ func _submit_diff_state(diff_state: Dictionary, tick: int, reference_tick: int):
 			# State is completely invalid
 			_logger.warning("Received invalid state from %s for tick %s", [sender, tick])
 			is_valid_state = false
-	
+
 	if NetworkRollback.enable_diff_states:
 		if is_valid_state and diff_ack_interval > 0 and tick > _next_diff_ack_tick:
 			_ack_diff_state.rpc_id(get_multiplayer_authority(), tick)
@@ -633,12 +633,12 @@ func _submit_diff_state(diff_state: Dictionary, tick: int, reference_tick: int):
 func _ack_full_state(tick: int):
 	var sender_id := multiplayer.get_remote_sender_id()
 	_ackd_state[sender_id] = tick
-	
+
 	_logger.trace("Peer %d ack'd full state for tick %d", [sender_id, tick])
 
 @rpc("any_peer", "unreliable_ordered", "call_remote")
 func _ack_diff_state(tick: int):
 	var sender_id := multiplayer.get_remote_sender_id()
 	_ackd_state[sender_id] = tick
-	
+
 	_logger.trace("Peer %d ack'd diff state for tick %d", [sender_id, tick])

@@ -26,8 +26,9 @@ var just_jumped := false
 func _rollback_tick(delta: float, tick: int, is_fresh: bool = true) -> void:
 	if not has_player():
 		return
-	if Multiplayer.is_client() and is_fresh and is_my_blob():
+	if Multiplayer.is_client() and is_fresh:
 		return
+
 
 	#if Multiplayer.is_client():
 	#	print(tick)
@@ -58,8 +59,12 @@ func _rollback_tick(delta: float, tick: int, is_fresh: bool = true) -> void:
 		mouse_pos = i_mouse
 
 	var facing = 1
+	$Body.flip_h = false
+	$Head.flip_h = false
 	if mouse_pos.x < position.x:
+		$Body.flip_h = true
 		facing = -1
+		$Head.flip_h = true
 	if is_on_floor():
 		if sign(velocity.x) == -direction:
 			velocity.x *= -0.5

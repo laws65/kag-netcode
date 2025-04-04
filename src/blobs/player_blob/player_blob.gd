@@ -45,7 +45,7 @@ func _rollback_tick(delta: float, tick: int, is_fresh: bool = true) -> void:
 		current_bounce_cooldown -= 1
 
 	NetworkedInput.set_time(tick)
-	NetworkedInput.set_target(get_player_id())
+	NetworkedInput.set_target_player(get_player())
 
 	var i_direction = NetworkedInput.get_input("movement")
 	var i_mouse = NetworkedInput.get_input("mouse")

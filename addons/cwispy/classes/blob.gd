@@ -89,6 +89,10 @@ func get_player_id() -> int:
 	return _player_id
 
 
+func get_player() -> Player:
+	return Player.get_player_by_id(_player_id)
+
+
 func server_set_player_id(player_id: int) -> void:
 	assert(Multiplayer.is_server(), "Must be called on server")
 	_set_player_id.rpc_id(0, player_id)
@@ -125,17 +129,6 @@ func _die() -> void:
 	queue_free()
 	Multiplayer.blob_died.emit(self)
 	get_parent().remove_child(self)
-
-
-func aget_snapshot() -> Dictionary:
-	return {"position": position, "velocity": velocity}
-
-
-func aload_snapshot(snapshot: Dictionary) -> void:
-	if snapshot.has("position"):
-		position = snapshot["position"]
-	if snapshot.has("velocity"):
-		velocity = snapshot["velocity"]
 
 
 func load_snapshot(snapshot: Dictionary) -> void:

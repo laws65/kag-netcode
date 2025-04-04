@@ -112,8 +112,13 @@ func get_input(input_name: String) -> Variant:
 	return
 
 
-func set_target(new_target_id: int) -> void:
-	_target_player_id = new_target_id
+func set_target_player_id(target_player_id: int) -> void:
+	_target_player_id = target_player_id
+
+
+func set_target_player(target_player: Player) -> void:
+	if Player.is_valid_player(target_player):
+		set_target_player_id(target_player.get_id())
 
 
 func set_time(new_time: int) -> void:

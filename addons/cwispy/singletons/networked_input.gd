@@ -37,6 +37,7 @@ func _post_tick(_delta: float, _tick: int) -> void:
 ## Reads the player input into a dictionary.
 ## Adds the player input into unacknowledged inputs buffer
 ## Send all unacknowledged inputs to server
+## Add input to own buffer for blobs to use etc.
 func _broadcast_and_save_inputs(tick: int) -> void:
 	var inputs := _get_inputs(tick)
 	_client_unacknowledged_inputs.push_front(inputs)
@@ -59,7 +60,7 @@ func _server_receive_unacknowledged_inputs(unacknowledged_inputs: Array) -> void
 	_client_receive_acknowledged_inputs.rpc_id(player_id, acknowledged_input_timestamps)
 
 
-## Remove inputs that have been received by the server
+## Stop sending client inputs that have been received by the server
 @rpc("authority", "unreliable")
 func _client_receive_acknowledged_inputs(acknowledged_input_timestamps: Array[int]) -> void:
 	_client_unacknowledged_inputs = _client_unacknowledged_inputs.filter(

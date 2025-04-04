@@ -10,7 +10,8 @@ var _target_player_id := -1
 var collect_input_function: Callable = func():
 	return {"movement": Input.get_vector("left", "right", "up", "down"), "mouse": get_tree().root.get_node("/root/Main/Game").get_global_mouse_position()}
 
-var last_acknowledged_inputs: Dictionary[int, int]
+
+var _client_unacknowledged_inputs: Array[Dictionary]
 
 
 func _get_inputs(tick: int) -> Dictionary:
@@ -30,33 +31,40 @@ func _pre_tick(_delta: float, tick: int) -> void:
 
 
 func _post_tick(_delta: float, _tick: int) -> void:
-	if Multiplayer.is_server():
-		for player_id in last_acknowledged_inputs.keys():
-			_acknowledge_input.rpc_id(player_id, last_acknowledged_inputs[player_id])
+	pass
 
 
-@rpc("authority", "unreliable")
-func _acknowledge_input(input_tick: int) -> void:
-	last_acknowledged_inputs[multiplayer.get_unique_id()] = input_tick
-
-	for i in _input_buffer[multiplayer.get_unique_id()].size():
-		var size = _input_buffer[multiplayer.get_unique_id()].size()
-		var input := _input_buffer[multiplayer.get_unique_id()][size-i-1] as Dictionary
-		if input["time"] < input_tick and size > MAX_INPUT_BUFFER_SIZE:
-			_input_buffer.erase(i)
-
-
+## Reads the player input into a dictionary.
+## Adds the player input into unacknowledged inputs buffer
+## Send all unacknowledged inputs to server
 func _broadcast_and_save_inputs(tick: int) -> void:
 	var inputs := _get_inputs(tick)
-	_receive_client_inputs.rpc_id(1, inputs)
+	_client_unacknowledged_inputs.push_front(inputs)
+	_server_receive_unacknowledged_inputs.rpc_id(1, _client_unacknowledged_inputs)
 	_add_inputs_to_buffer(inputs, multiplayer.get_unique_id())
 
 
-@rpc("unreliable", "any_peer")
-func _receive_client_inputs(inputs: Dictionary) -> void:
-	#print("received input ", timestamp)
+## Receive array of inputs from client
+## Put these into the input buffer for blobs to use etc.
+## Tell client to no longer send the received inputs
+@rpc("any_peer", "unreliable")
+func _server_receive_unacknowledged_inputs(unacknowledged_inputs: Array) -> void:
+	# TODO add input sanitation (i.e. don't crash the server)
 	var player_id := multiplayer.get_remote_sender_id()
-	_add_inputs_to_buffer(inputs, player_id)
+	var acknowledged_input_timestamps: Array[int]
+	for input in unacknowledged_inputs:
+		acknowledged_input_timestamps.push_back(input["time"] as int)
+		_add_inputs_to_buffer(input, player_id)
+
+	_client_receive_acknowledged_inputs.rpc_id(player_id, acknowledged_input_timestamps)
+
+
+## Remove inputs that have been received by the server
+@rpc("authority", "unreliable")
+func _client_receive_acknowledged_inputs(acknowledged_input_timestamps: Array[int]) -> void:
+	_client_unacknowledged_inputs = _client_unacknowledged_inputs.filter(
+		func(input: Dictionary): input["time"] not in acknowledged_input_timestamps
+	)
 
 
 func _add_inputs_to_buffer(inputs: Dictionary, player_id: int) -> void:
@@ -93,9 +101,6 @@ func get_input(input_name: String) -> Variant:
 		var i_timestamp := inputs["time"] as int
 		if i_timestamp <= _target_input_time:
 			assert(inputs.has(input_name), "Invalid input name " + str(input_name))
-			if Multiplayer.is_server():
-				last_acknowledged_inputs[_target_player_id] = i_timestamp
-				#print("input ", i_timestamp, " : ", _target_input_time)
 			return inputs[input_name]
 
 	# TODO fix this bandaid where sometimes the client deletes their own input and can't find it, def something to do with needing rollback for high ping (therefore needing old inputs), even though they've been acknowledged? idk

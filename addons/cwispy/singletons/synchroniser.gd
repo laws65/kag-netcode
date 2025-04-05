@@ -9,8 +9,8 @@ var RENDER_TIME_TICK_DELAY = 1
 # TODO work on getting this down to 1, on 0 ping it needs to be 2 otherwise the inputs wont exist for some rason
 var INPUT_BUFFER_SIZE = 2 # not constant
 
-var client_prediction_enabled := true
-var remote_client_prediction_enabled := false
+var client_prediction_enabled := false
+var remote_client_prediction_enabled := true
 
 var latest_player_ticks: Dictionary[int, int]
 
@@ -51,16 +51,15 @@ func _tick_player_blob(blob: Blob, tick: int) -> void:
 
 	var render_tick: int = tick - INPUT_BUFFER_SIZE - half_tick_rtt
 	var latest_input_timestamp := NetworkedInput.get_latest_input_timestamp(player_id)
-	#render_tick = min(render_tick, latest_input_timestamp)
 	var current_tick := latest_player_ticks[player_id] + 1
-	var inputs_collection := NetworkedInput.get_collection(player_id).duplicate(true)
-	inputs_collection.reverse()
 
 	while current_tick <= render_tick:
-		if NetworkedInput.has_input_at_time(player_id, current_tick):
-			blob._rollback_tick(Clock.fixed_delta, current_tick, true)
-		else:
-			push_warning("Missing input on tick ", current_tick, " : ", latest_input_timestamp)
+		if latest_input_timestamp < current_tick:
+			# TODO increase buffer size, to account for changes in ping, etc. so that we don't have to predict inputs consistently
+			#push_warning("Missing input on tick ", current_tick, " : ", latest_input_timestamp)
+			var predicted_input := NetworkedInput.get_predicted_input(player_id, current_tick)
+			NetworkedInput._add_inputs_to_buffer(predicted_input, player_id)
+		blob._rollback_tick(Clock.fixed_delta, current_tick, true)
 		current_tick += 1
 
 	latest_player_ticks[player_id] = render_tick
@@ -118,12 +117,12 @@ func _sync_blobs() -> void:
 		print("Couldn't even find snapshot, returning")
 		return
 
-	print("simulating")
 	var ticks_to_simulate := render_tick - recent_snapshot_before_render_tick["time"] as int
 	var player_inputs := recent_snapshot_before_render_tick["inputs"] as Dictionary[int, Dictionary]
 	var blobs_to_simulate := recent_snapshot_before_render_tick["blobs"].keys() as Array
 
 	while client_prediction_enabled and ticks_to_simulate > 0:
+		print("simulating")
 		var simulated_render_tick: int = render_tick - ticks_to_simulate + 1
 		for blob_id in blobs_to_simulate:
 			var blob := Blob.get_blob_by_id(blob_id)

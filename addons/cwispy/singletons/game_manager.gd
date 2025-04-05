@@ -21,21 +21,21 @@ func _on_server_started() -> void:
 func load_gamemode(path: String) -> void:
 	var config := ConfigFile.new()
 	var err := config.load(path)
-	
+
 	if err != OK:
 		print("Couldn't open config file with path " + str(path) + " (error code " + str(err) + ")")
 		return
-	
+
 	var old_gamemode_path = gamemode_path
 	gamemode_path = path
-	
+
 	gamemode_switched.emit(old_gamemode_path, gamemode_path)
-	
+
 	var scripts_parent := get_scripts_parent()
 	for child in scripts_parent.get_children():
 		scripts_parent.remove_child(child)
 		child.queue_free()
-	
+
 	var scripts := config.get_value("Rules", "scripts") as Array
 	for script_path in scripts:
 		var script := load(script_path) as GDScript
@@ -47,11 +47,11 @@ func load_gamemode(path: String) -> void:
 func load_random_map() -> void:
 	var config := ConfigFile.new()
 	var err := config.load(gamemode_path)
-	
+
 	if err != OK:
 		print("Couldn't open config file with path " + str(gamemode_path) + " (error code " + str(err) + ")")
 		return
-	
+
 	var map_pool := config.get_value("Rules", "maps") as Array
 	var new_map_path := map_pool.pick_random() as String
 	load_map.rpc_id(0, new_map_path)
@@ -61,15 +61,15 @@ func load_random_map() -> void:
 func load_map(map_path: String) -> void:
 	var packed_scene := load(map_path)
 	var instance = packed_scene.instantiate() as Node2D
-	
+
 	var old_map = current_map
 	current_map = map_path
-	
+
 	var map_parent := get_map_parent()
 	for map_object in map_parent.get_children():
 		map_parent.remove_child(map_object)
 		map_object.queue_free()
-	
+
 	map_switched.emit(old_map, current_map)
 	map_parent.add_child(instance)
 

@@ -125,19 +125,27 @@ func _add_inputs_to_buffer(inputs: Dictionary, player_id: int) -> void:
 		return
 
 	for i in _input_buffer[player_id].size():
-		if _input_buffer[player_id][i].is_empty():
+		var i_inputs: Dictionary = _input_buffer[player_id][i]
+		if i_inputs.is_empty():
 			# BUG figure out the cause of needing this check
 			continue
-		var i_timestamp := _input_buffer[player_id][i]["time"] as int
+		var i_timestamp := i_inputs["time"] as int
 		if inputs["time"] > i_timestamp:
 			_input_buffer[player_id].insert(i, inputs)
+			break
+
+		if inputs["time"] == i_timestamp and i_inputs.has("flag_predicted"):
+			_input_buffer[player_id][i] = inputs
 			break
 
 		if i == _input_buffer[player_id].size() - 1:
 			_input_buffer[player_id].push_back(inputs)
 
 	if Multiplayer.is_server():
-		while _input_buffer[player_id].size() > MAX_INPUT_BUFFER_SIZE:
+		while (_input_buffer[player_id].size() > MAX_INPUT_BUFFER_SIZE
+		and not _input_buffer[player_id].is_empty()
+		and _input_buffer[player_id].front()["time"] - _input_buffer[player_id].back()["time"] > 60
+		):
 			_input_buffer[player_id].pop_back()
 
 
@@ -203,22 +211,14 @@ func get_latest_input_timestamp(player_id: int) -> int:
 	return 0
 
 
-func has_input_at_time(player_id: int, tick: int) -> bool:
-	if not _input_buffer.has(player_id):
-		return false
-
-	for input in _input_buffer[player_id]:
-		if input["time"] == tick:
-			return true
-
-
-	return false
-
-func get_collection(player_id: int) -> Array:
-	return _input_buffer.get(player_id, [])
-
-
 func is_button_pressed(button_name: String) -> bool:
 	var buttons := get_input("buttons")
 
 	return buttons & input_names[button_name] > 0
+
+
+func get_predicted_input(player_id: int, tick: int) -> Dictionary:
+	var out := get_inputs_for_player_at_time(player_id, tick)
+	out["flag_predicted"] = true
+	out["time"] = tick
+	return out

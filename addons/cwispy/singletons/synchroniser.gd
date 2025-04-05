@@ -1,8 +1,6 @@
 extends Node
 
 
-var _state_snapshots: Array[Dictionary]
-
 signal after_tick
 
 var RENDER_TIME_TICK_DELAY = 1
@@ -19,7 +17,6 @@ var client_sync_exclude: Array[int] # Array of blob id's that won't be in _load_
 
 
 func _ready() -> void:
-	NetworkTime.after_tick.connect(_post_tick)
 	NetworkTime.on_tick.connect(_tick)
 	Multiplayer.player_joined.connect(_on_Player_joined)
 	Multiplayer.player_left.connect(_on_Player_left)
@@ -74,15 +71,6 @@ func _tick_player_blob(blob: Blob, tick: int) -> void:
 	server_latest_player_ticks[player_id] = render_tick
 
 
-func _post_tick(_delta: float, tick: int) -> void:
-	if not Multiplayer.is_server() and not Multiplayer.is_client(): return
-
-	if Multiplayer.is_server():
-		var snapshot := _create_world_snapshot(tick)
-		_insert_snapshot_into_buffer(snapshot)
-		_broadcast_snapshot(snapshot)
-
-
 func _sync_blobs() -> void:
 	print("-----NEW TICK-----------")
 	# TODO fix client side prediction code
@@ -98,14 +86,15 @@ func _sync_blobs() -> void:
 	var latest_used_input_tick := latest_consumed_player_inputs.get(multiplayer.get_unique_id())
 
 	# try to directly load snapshot if available
-	for i in _state_snapshots.size():
-		var i_timestamp := _state_snapshots[i]["time"] as int
+	var snapshots_buffer := SnapshotManager.get_snapshots_buffer()
+	for i in snapshots_buffer.size():
+		var i_timestamp := snapshots_buffer[i]["time"] as int
 		if render_tick != i_timestamp:
 			continue
 
 		print("render tick", render_tick, " : ", NetworkTime.tick)
 		print("last used input ", latest_used_input_tick)
-		var snapshot: Dictionary = _state_snapshots[i]
+		var snapshot: Dictionary = snapshots_buffer[i]
 
 		if (client_prediction_enabled
 		and latest_used_input_tick
@@ -125,8 +114,8 @@ func _sync_blobs() -> void:
 
 	# otherwise find latest snapshot and simulate until render_tick
 	var recent_snapshot_before_render_tick: Dictionary = {"time":-1}
-	for i in _state_snapshots.size():
-		var snapshot: Dictionary = _state_snapshots[i]
+	for i in snapshots_buffer.size():
+		var snapshot: Dictionary = snapshots_buffer[i]
 		if (snapshot["time"] > recent_snapshot_before_render_tick["time"]
 		and snapshot["time"] < render_tick
 		and snapshot["authority"]):
@@ -162,8 +151,8 @@ func _sync_blobs() -> void:
 				blob._rollback_tick(NetworkTime.ticktime, simulated_render_tick, false)
 
 		if ticks_to_simulate > 1:
-			var snapshot := _create_world_snapshot(simulated_render_tick)
-			_insert_snapshot_into_buffer(snapshot)
+			var snapshot := SnapshotManager.create_world_snapshot(simulated_render_tick)
+			SnapshotManager.insert_snapshot_into_buffer(snapshot)
 
 		ticks_to_simulate -= 1
 
@@ -172,40 +161,9 @@ func _sync_blobs() -> void:
 	after_tick.emit()
 
 
-func _insert_snapshot_into_buffer(snapshot: Dictionary) -> void:
-	# TODO write algorithm to find correct index, to prevent slowdowns for large buffer sizes
-	if Multiplayer.is_server() or not client_prediction_enabled:
-		while _state_snapshots.size() > 20 + 1:
-			_state_snapshots.pop_back()
-	elif latest_consumed_player_inputs.has(multiplayer.get_unique_id()):
-		var latest_used_input := latest_consumed_player_inputs[multiplayer.get_unique_id()]
-		while not _state_snapshots.is_empty() and _state_snapshots.back()["time"] < latest_used_input:
-			_state_snapshots.pop_back()
-
-	if _state_snapshots.is_empty():
-		_state_snapshots.push_front(snapshot)
-		return
-
-	if _state_snapshots[0]["time"] < snapshot["time"]:
-		_state_snapshots.push_front(snapshot)
-		return
-
-	for i in _state_snapshots.size():
-		var i_snapshot_time := _state_snapshots[i]["time"] as int
-		if i_snapshot_time == snapshot["time"]:
-			_state_snapshots[i] = snapshot
-			return
-	for i in _state_snapshots.size():
-		var i_snapshot_time := _state_snapshots[i]["time"] as int
-		if snapshot["time"] > i_snapshot_time:
-			_state_snapshots.insert(i, snapshot)
-			return
-
-	_state_snapshots.push_back(snapshot)
-
-
 func _rollback_to(time: int) -> void:
-	for snapshot in _state_snapshots:
+	var snapshots_buffer := SnapshotManager.get_snapshots_buffer()
+	for snapshot in snapshots_buffer:
 		if snapshot["time"] == time:
 			_load_snapshot(snapshot)
 			return
@@ -221,44 +179,6 @@ func _load_snapshot(snapshot: Dictionary) -> void:
 		if Blob.is_valid_blob(blob):
 			# BUG figure out why this check is needed
 			blob.load_snapshot(blob_snapshot)
-
-
-func _broadcast_snapshot(snapshot: Dictionary) -> void:
-	_receive_server_snapshot.rpc_id(0, snapshot)
-
-
-@rpc("unreliable", "authority")
-func _receive_server_snapshot(snapshot: Dictionary) -> void:
-	var player_id := multiplayer.get_unique_id()
-	var latest_inputs: Dictionary[int, int] = snapshot["latest_inputs"]
-	if latest_inputs.has(player_id):
-		latest_consumed_player_inputs[player_id] = latest_inputs[player_id]
-	_insert_snapshot_into_buffer(snapshot)
-
-
-func _create_world_snapshot(time: int) -> Dictionary:
-	var output = {
-		"blobs": {},
-		"time": time,
-		"authority": Multiplayer.is_server(),
-		"latest_inputs": latest_consumed_player_inputs,
-	}
-
-	var blobs := Blob.get_blobs()
-	for blob in blobs as Array[Blob]:
-		var blob_snapshot := blob.get_snapshot()
-		output["blobs"][blob.get_id()] = blob_snapshot
-
-	if Multiplayer.is_server():
-		var player_inputs: Dictionary[int, Dictionary]
-		var players := Player.get_players()
-		for player in players:
-			var player_id := player.get_id() as int
-			var inputs = NetworkedInput.get_inputs_for_player_at_time(player_id, time)
-			player_inputs[player_id] = inputs
-		output["inputs"] = player_inputs
-
-	return output
 
 
 func _attempt_client_prediction_from(from_tick: int, to_tick: int) -> void:

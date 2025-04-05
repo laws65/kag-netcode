@@ -30,6 +30,7 @@ WindowTiler="*res://addons/netfox.extras/window-tiler.gd"
 Synchroniser="*res://addons/cwispy/singletons/synchroniser.gd"
 Clock="*res://addons/cwispy/singletons/clock.gd"
 NetworkedInput="*res://src/singletons/networked_input.gd"
+SnapshotManager="*res://addons/cwispy/singletons/snapshot_manager.gd"
 
 [display]
 

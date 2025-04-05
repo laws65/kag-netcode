@@ -29,6 +29,7 @@ NetworkPerformance="*res://addons/netfox/network-performance.gd"
 WindowTiler="*res://addons/netfox.extras/window-tiler.gd"
 NetworkedInput="*res://addons/cwispy/singletons/networked_input.gd"
 Synchroniser="*res://addons/cwispy/singletons/synchroniser.gd"
+Clock="*res://addons/cwispy/singletons/clock.gd"
 
 [display]
 

@@ -140,3 +140,14 @@ func get_inputs_for_player_at_time(player_id: int, tick: int) -> Dictionary:
 
 func _remove_player_inputs(player_id: int) -> void:
 	_input_buffer.erase(player_id)
+
+func get_latest_input_timestamp(player_id: int) -> int:
+	if _input_buffer.has(player_id):
+		var arr := _input_buffer[player_id]
+		if not arr.is_empty():
+			return arr.front()["time"]
+	return 0
+
+
+func get_collection(player_id: int) -> Array:
+	return _input_buffer.get(player_id, [])

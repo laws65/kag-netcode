@@ -72,6 +72,8 @@ func has_blob() -> bool:
 	return _blob_id != -1
 
 
+func get_rtt() -> int:
+	return Clock.player_rtt.get(get_id(), 0.0)
 
 
 func get_blob() -> Blob:

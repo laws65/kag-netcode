@@ -6,34 +6,71 @@ var _state_snapshots: Array[Dictionary]
 signal after_tick
 
 var RENDER_TIME_TICK_DELAY = 1
+var INPUT_BUFFER_SIZE = 2 # not constant
 
 var client_prediction_enabled := true
 var remote_client_prediction_enabled := true
 
+var latest_player_ticks: Dictionary[int, int]
 
 func _ready() -> void:
 	NetworkTime.after_tick.connect(_post_tick)
 	NetworkTime.on_tick.connect(_tick)
+	Multiplayer.player_joined.connect(_on_Player_joined)
+	Multiplayer.player_left.connect(_on_Player_left)
 	#NetworkTime.on_tick.connect(_on_tick)
 
 
 func _tick(_delta: float, tick: int) -> void:
 	if Multiplayer.is_client():
 		_sync_blobs()
+	elif Multiplayer.is_server():
+		_tick_world(tick)
+
+
+func _tick_world(tick: int) -> void:
+	var blobs := Blob.get_blobs()
+	for blob in blobs as Array[Blob]:
+		var player := blob.get_player()
+		if not Player.is_valid_player(player):
+			var delta := 1/float(Engine.get_physics_ticks_per_second())
+			blob._rollback_tick(delta, tick, true)
+			continue
+
+		var player_id := player.get_id()
+		var rtt := player.get_rtt()
+		var half_tick_rtt: int = ceil(
+			# TODO rewrite this using NetworkTime.ticktime
+			rtt*0.5/float((1000/float(Engine.get_physics_ticks_per_second())))
+		)
+		var render_tick: int = tick - INPUT_BUFFER_SIZE - half_tick_rtt
+		var latest_input_timestamp := NetworkedInput.get_latest_input_timestamp(player_id)
+		#print(render_tick, " : ", latest_input_timestamp)
+
+		var inputs_collection := NetworkedInput.get_collection(player_id).duplicate(true)
+		inputs_collection.reverse()
+		for i in inputs_collection.size():
+			var i_timestamp := inputs_collection[i]["time"] as int
+			if not latest_player_ticks.has(player_id):
+				break
+			var last_tick := latest_player_ticks[player_id]
+			if i_timestamp == last_tick + 1:
+				blob._rollback_tick(1/float(Engine.get_physics_ticks_per_second()), last_tick + 1, true)
+				print(last_tick + 1, " : ", render_tick)
+				latest_player_ticks[player_id] = last_tick + 1
+				if last_tick + 1 == render_tick:
+					break
+
+
 
 
 func _post_tick(_delta: float, tick: int) -> void:
 	if not Multiplayer.is_server() and not Multiplayer.is_client(): return
 
-	if Multiplayer.is_client():
-		#_interpolate_blobs()
-		return
-
-	var snapshot := _create_world_snapshot(tick)
-	_insert_snapshot_into_buffer(snapshot)
 
 	if Multiplayer.is_server():
-		#print("broadcasting with time " + str(NetworkTime.tick))
+		var snapshot := _create_world_snapshot(tick)
+		_insert_snapshot_into_buffer(snapshot)
 		_broadcast_snapshot(snapshot)
 
 
@@ -201,3 +238,13 @@ func _attempt_client_prediction_from(from_tick: int, to_tick: int) -> void:
 
 
 		current_tick += 1
+
+
+func _on_Player_joined(player: Player) -> void:
+	if Multiplayer.is_server():
+		latest_player_ticks[player.get_id()] = NetworkTime.tick
+
+
+func _on_Player_left(player: Player) -> void:
+	if Multiplayer.is_server():
+		latest_player_ticks.erase(player.get_id())

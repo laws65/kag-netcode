@@ -150,6 +150,9 @@ func get_input(input_name: String) -> Variant:
 
 	for i in _input_buffer[_target_player_id].size():
 		var inputs := _input_buffer[_target_player_id][i] as Dictionary
+		if inputs.is_empty():
+			# TODO figure out why the inputs here are empty
+			continue
 		var i_timestamp := inputs["time"] as int
 		if i_timestamp <= _target_input_time:
 			assert(inputs.has(input_name), "Invalid input name " + str(input_name))
@@ -199,6 +202,17 @@ func get_latest_input_timestamp(player_id: int) -> int:
 			return arr.front()["time"]
 	return 0
 
+
+func has_input_at_time(player_id: int, tick: int) -> bool:
+	if not _input_buffer.has(player_id):
+		return false
+
+	for input in _input_buffer[player_id]:
+		if input["time"] == tick:
+			return true
+
+
+	return false
 
 func get_collection(player_id: int) -> Array:
 	return _input_buffer.get(player_id, [])

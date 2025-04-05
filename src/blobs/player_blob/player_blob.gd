@@ -1,6 +1,5 @@
 extends Blob
 
-var asdf := 0
 
 var ground_accel := 300
 var air_accel := 450

@@ -15,6 +15,7 @@ func _on_Player_joined(player: Player) -> void:
 	)
 	var params := {"position": random_pos}
 	var new_blob := Multiplayer.server_spawn_blob("res://src/blobs/player_blob/player_blob.tscn", params)
+	await get_tree().create_timer(1).timeout
 	player.server_set_blob(new_blob)
 
 

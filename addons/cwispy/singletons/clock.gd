@@ -4,6 +4,9 @@ extends Node
 var player_rtt: Dictionary[int, float]
 var sync_interval_secs := 0.2
 
+var fixed_delta:
+	get:
+		return 1/float(Engine.get_physics_ticks_per_second())
 
 func _ready() -> void:
 	Multiplayer.player_left.connect(_on_Player_left)

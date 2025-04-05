@@ -80,3 +80,7 @@ func get_blob() -> Blob:
 	if not has_blob():
 		return null
 	return Blob.get_blob_by_id(_blob_id)
+
+
+func get_blob_id() -> int:
+	return _blob_id

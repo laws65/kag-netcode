@@ -38,7 +38,11 @@ func _get_inputs(tick: int) -> Dictionary:
 	var out := {
 		"time": tick,
 		"buttons": button_inputs,
-		"mouse": get_tree().root.get_node("/root/Main/Game").get_global_mouse_position() as Vector2
+		"mouse": (func():
+			var screen_mouse_position := get_viewport().get_mouse_position()
+			var screen_size := get_viewport().get_visible_rect().size
+			var camera_position := get_viewport().get_camera_2d().global_position
+			return screen_mouse_position - screen_size*0.5 + camera_position).call()
 	}
 
 	return out
@@ -219,6 +223,14 @@ func is_button_pressed(button_name: String) -> bool:
 
 func get_predicted_input(player_id: int, tick: int) -> Dictionary:
 	var out := get_inputs_for_player_at_time(player_id, tick)
+	if out.is_empty():
+		out["buttons"] = 0
+		out["mouse"] = Vector2.ZERO
 	out["flag_predicted"] = true
 	out["time"] = tick
 	return out
+
+
+func has_inputs_at_time(player_id: int, tick: int) -> bool:
+	var inputs := get_inputs_for_player_at_time(player_id, tick)
+	return inputs and inputs["time"] == tick

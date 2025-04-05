@@ -125,7 +125,7 @@ _data = {
 [node name="PlayerBlob" instance=ExtResource("1_0b5ix")]
 script = ExtResource("2_oinls")
 spawn_props = Array[String]([])
-snapshot_props = Array[String](["position", "velocity", "just_jumped", "current_bounce_cooldown"])
+snapshot_props = Array[String](["position", "velocity", "just_jumped", "current_bounce_cooldown", "Head:flip_h", "Body:flip_h"])
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." index="0"]
 position = Vector2(0, -8)

@@ -201,6 +201,12 @@ func get_my_blob() -> Blob:
 	return null
 
 
+func get_my_blob_id() -> int:
+	if has_local_player():
+		return get_my_player().get_blob_id()
+	return -1
+
+
 func get_my_player() -> Player:
 	return Player.get_player_by_id(multiplayer.get_unique_id())
 

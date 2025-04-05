@@ -66,7 +66,7 @@ func _tick_player_blob(blob: Blob, tick: int) -> void:
 			# TODO increase buffer size, to account for changes in ping, etc. so that we don't have to predict inputs consistently
 			#push_warning("Missing input on tick ", current_tick, " : ", latest_input_timestamp)
 			var predicted_input := NetworkedInput.get_predicted_input(player_id, current_tick)
-			NetworkedInput._add_inputs_to_buffer(predicted_input, player_id)
+			NetworkedInput.add_temp_input(player_id, predicted_input)
 
 		blob._rollback_tick(Clock.fixed_delta, current_tick, true)
 		current_tick += 1
@@ -156,7 +156,7 @@ func _sync_blobs() -> void:
 					var player_id := blob.get_player_id()
 					var inputs := player_inputs[player_id]
 					#print("here simulating ", simulated_render_tick, " : ", NetworkTime.tick)
-					NetworkedInput._add_inputs_to_buffer(player_inputs[player_id], player_id)
+					NetworkedInput.add_temp_input(player_id, inputs)
 					blob._rollback_tick(NetworkTime.ticktime, simulated_render_tick, false)
 			else:
 				blob._rollback_tick(NetworkTime.ticktime, simulated_render_tick, false)

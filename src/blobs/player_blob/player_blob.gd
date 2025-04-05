@@ -54,7 +54,7 @@ func _rollback_tick(delta: float, tick: int, is_fresh: bool = true) -> void:
 
 	if i_buttons != null:
 		direction = int(NetworkedInput.is_button_pressed("right")) - int(NetworkedInput.is_button_pressed("left"))
-		jump_pressed = int(bool(i_buttons & NetworkedInput.UP))
+		jump_pressed = NetworkedInput.is_button_pressed("up")
 		mouse_pos = i_mouse
 
 	var facing = 1

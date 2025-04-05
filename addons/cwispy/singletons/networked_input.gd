@@ -1,5 +1,5 @@
 extends Node
-
+class_name _NetworkedInput
 
 const MAX_INPUT_BUFFER_SIZE = 10
 
@@ -7,82 +7,41 @@ var _input_buffer: Dictionary[int, Array]
 var _target_input_time := -1
 var _target_player_id := -1
 
-
-enum {
-	RIGHT = 1,
-	UP = 2,
-	LEFT = 4,
-	DOWN = 8,
-}
-
-var input_names: Dictionary[String, int] = {
-	"right": RIGHT,
-	"up": UP,
-	"left": LEFT,
-	"down": DOWN,
-}
-
 var _client_unacknowledged_serialised_inputs: Array[PackedByteArray]
+var _players_with_temp_inputs: Array[int]
 
-
+#region Implementation details
 func _get_inputs(tick: int) -> Dictionary:
-	var get_button_inputs = func():
-		var out := 0
-		for input_name in input_names.keys():
-			if Input.is_action_pressed(input_name):
-				var input_code := input_names[input_name]
-				out += input_code
-		return out
-
-	var button_inputs := get_button_inputs.call()
-	var out := {
-		"time": tick,
-		"buttons": button_inputs,
-		"mouse": (func():
-			var screen_mouse_position := get_viewport().get_mouse_position()
-			var screen_size := get_viewport().get_visible_rect().size
-			var camera_position := get_viewport().get_camera_2d().global_position
-			return screen_mouse_position - screen_size*0.5 + camera_position).call()
-	}
-
-	return out
+	push_error("Unimplemented!")
+	return {}
 
 
 func _get_serialised_inputs(inputs: Dictionary) -> PackedByteArray:
-	var bitstream := StreamPeerBuffer.new()
-
-	bitstream.put_32(inputs["time"])
-	bitstream.put_64(inputs["buttons"])
-	bitstream.put_half(inputs["mouse"].x); bitstream.put_half(inputs["mouse"].y)
-
-	return bitstream.data_array
+	push_error("Unimplemented!")
+	return PackedByteArray()
 
 
 func _get_deserialised_inputs(bytes: PackedByteArray) -> Dictionary:
-	var bitstream := StreamPeerBuffer.new()
-	bitstream.data_array = bytes
+	push_error("Unimplemented!")
+	return {}
 
-	var out: Dictionary
 
-	out["time"] = bitstream.get_32()
-	out["buttons"] = bitstream.get_64()
-	out["mouse"] = Vector2(bitstream.get_half(), bitstream.get_half())
-
-	return out
+func _get_predicted_input(player_id: int, tick: int) -> Dictionary:
+	push_error("Unimplemented!")
+	return {}
+#endregion
 
 
 func _ready() -> void:
-	NetworkTime.before_tick.connect(_pre_tick)
-	NetworkTime.after_tick.connect(_post_tick)
-
-
-func _pre_tick(_delta: float, tick: int) -> void:
-	if Multiplayer.is_client():
-		_broadcast_and_save_inputs(tick)
-
-
-func _post_tick(_delta: float, _tick: int) -> void:
-	pass
+	NetworkTime.before_tick.connect(
+		func (_delta: float, tick: int):
+			if Multiplayer.is_client():
+				_broadcast_and_save_inputs(tick)
+	)
+	Multiplayer.player_left.connect(
+		func(player: Player):
+			_input_buffer.erase(player.get_id())
+	)
 
 
 ## Reads the player input into bytes
@@ -138,7 +97,8 @@ func _add_inputs_to_buffer(inputs: Dictionary, player_id: int) -> void:
 			_input_buffer[player_id].insert(i, inputs)
 			break
 
-		if inputs["time"] == i_timestamp and i_inputs.has("flag_predicted"):
+		if (inputs["time"] == i_timestamp
+		and (i_inputs.has("flag_predicted") or i_inputs.has("flag_temp"))):
 			_input_buffer[player_id][i] = inputs
 			break
 
@@ -148,7 +108,7 @@ func _add_inputs_to_buffer(inputs: Dictionary, player_id: int) -> void:
 	if Multiplayer.is_server():
 		while (_input_buffer[player_id].size() > MAX_INPUT_BUFFER_SIZE
 		and not _input_buffer[player_id].is_empty()
-		and _input_buffer[player_id].front()["time"] - _input_buffer[player_id].back()["time"] > 60
+		and _input_buffer[player_id].front()["time"] - _input_buffer[player_id].back()["time"] > Engine.get_physics_ticks_per_second()
 		):
 			_input_buffer[player_id].pop_back()
 
@@ -204,9 +164,6 @@ func get_inputs_for_player_at_time(player_id: int, tick: int) -> Dictionary:
 	return {}
 
 
-func _remove_player_inputs(player_id: int) -> void:
-	_input_buffer.erase(player_id)
-
 func get_latest_input_timestamp(player_id: int) -> int:
 	if _input_buffer.has(player_id):
 		var arr := _input_buffer[player_id]
@@ -215,22 +172,19 @@ func get_latest_input_timestamp(player_id: int) -> int:
 	return 0
 
 
-func is_button_pressed(button_name: String) -> bool:
-	var buttons := get_input("buttons")
-
-	return buttons & input_names[button_name] > 0
-
-
-func get_predicted_input(player_id: int, tick: int) -> Dictionary:
-	var out := get_inputs_for_player_at_time(player_id, tick)
-	if out.is_empty():
-		out["buttons"] = 0
-		out["mouse"] = Vector2.ZERO
-	out["flag_predicted"] = true
-	out["time"] = tick
-	return out
-
-
 func has_inputs_at_time(player_id: int, tick: int) -> bool:
 	var inputs := get_inputs_for_player_at_time(player_id, tick)
 	return inputs and inputs["time"] == tick
+
+
+func get_predicted_input(player_id: int, tick: int) -> Dictionary:
+	var predicted := _get_predicted_input(player_id, tick)
+	predicted["flag_predicted"] = true
+	return predicted
+
+
+func add_temp_input(player_id: int, input: Dictionary) -> void:
+	input["flag_temp"] = true
+	_add_inputs_to_buffer(input, player_id)
+	if player_id not in _players_with_temp_inputs:
+		_players_with_temp_inputs.push_back(player_id)

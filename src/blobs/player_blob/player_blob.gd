@@ -47,15 +47,15 @@ func _rollback_tick(delta: float, tick: int, is_fresh: bool = true) -> void:
 	NetworkedInput.set_time(tick)
 	NetworkedInput.set_target_player(get_player())
 
-	var i_direction = NetworkedInput.get_input("movement")
+	var i_buttons = NetworkedInput.get_input("buttons")
 	var i_mouse = NetworkedInput.get_input("mouse")
 	var mouse_pos = global_position
 	var direction := 0.0
 	var jump_pressed := false
 
-	if i_direction != null:
-		direction = i_direction.x
-		jump_pressed = i_direction.y < 0
+	if i_buttons != null:
+		direction = int(NetworkedInput.is_button_pressed("right")) - int(NetworkedInput.is_button_pressed("left"))
+		jump_pressed = int(bool(i_buttons & NetworkedInput.UP))
 		mouse_pos = i_mouse
 
 	var facing = 1
@@ -112,7 +112,7 @@ func _rollback_tick(delta: float, tick: int, is_fresh: bool = true) -> void:
 			velocity.x *= 0.75
 		just_jumped = false
 
-	if i_direction == null or i_direction.x == 0.0:
+	if i_buttons == null or (not NetworkedInput.is_button_pressed("right") and not NetworkedInput.is_button_pressed("left")):
 		$AnimationPlayer.play("idle")
 	else:
 		$AnimationPlayer.play("walk")

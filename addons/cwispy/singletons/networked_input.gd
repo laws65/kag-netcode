@@ -7,16 +7,63 @@ var _input_buffer: Dictionary[int, Array]
 var _target_input_time := -1
 var _target_player_id := -1
 
-var collect_input_function: Callable = func():
-	return {"movement": Input.get_vector("left", "right", "up", "down"), "mouse": get_tree().root.get_node("/root/Main/Game").get_global_mouse_position()}
 
+enum {
+	RIGHT = 1,
+	UP = 2,
+	LEFT = 4,
+	DOWN = 8,
+}
 
-var _client_unacknowledged_inputs: Array[Dictionary]
+var input_names: Dictionary[String, int] = {
+	"right": RIGHT,
+	"up": UP,
+	"left": LEFT,
+	"down": DOWN,
+}
+
+var _client_unacknowledged_serialised_inputs: Array[PackedByteArray]
 
 
 func _get_inputs(tick: int) -> Dictionary:
-	var out := {"time": tick}
-	out.merge(collect_input_function.call())
+	var get_button_inputs = func():
+		var out := 0
+		for input_name in input_names.keys():
+			if Input.is_action_pressed(input_name):
+				var input_code := input_names[input_name]
+				out += input_code
+		return out
+
+	var button_inputs := get_button_inputs.call()
+	var out := {
+		"time": tick,
+		"buttons": button_inputs,
+		"mouse": get_tree().root.get_node("/root/Main/Game").get_global_mouse_position() as Vector2
+	}
+
+	return out
+
+
+func _get_serialised_inputs(inputs: Dictionary) -> PackedByteArray:
+	var bitstream := StreamPeerBuffer.new()
+
+	bitstream.put_32(inputs["time"])
+	bitstream.put_64(inputs["buttons"])
+	bitstream.put_half(inputs["mouse"].x); bitstream.put_half(inputs["mouse"].y)
+
+	return bitstream.data_array
+
+
+func _get_deserialised_inputs(bytes: PackedByteArray) -> Dictionary:
+	var bitstream := StreamPeerBuffer.new()
+	bitstream.data_array = bytes
+
+	var out: Dictionary
+
+	out["time"] = bitstream.get_32()
+	out["buttons"] = bitstream.get_64()
+	out["mouse"] = Vector2(bitstream.get_half(), bitstream.get_half())
+
 	return out
 
 
@@ -34,14 +81,15 @@ func _post_tick(_delta: float, _tick: int) -> void:
 	pass
 
 
-## Reads the player input into a dictionary.
+## Reads the player input into bytes
 ## Adds the player input into unacknowledged inputs buffer
 ## Send all unacknowledged inputs to server
 ## Add input to own buffer for blobs to use etc.
 func _broadcast_and_save_inputs(tick: int) -> void:
 	var inputs := _get_inputs(tick)
-	_client_unacknowledged_inputs.push_front(inputs)
-	_server_receive_unacknowledged_inputs.rpc_id(1, _client_unacknowledged_inputs)
+	var serialised_inputs := _get_serialised_inputs(inputs)
+	_client_unacknowledged_serialised_inputs.push_front(serialised_inputs)
+	_server_receive_unacknowledged_serialised_inputs.rpc_id(1, _client_unacknowledged_serialised_inputs)
 	_add_inputs_to_buffer(inputs, multiplayer.get_unique_id())
 
 
@@ -49,11 +97,12 @@ func _broadcast_and_save_inputs(tick: int) -> void:
 ## Put these into the input buffer for blobs to use etc.
 ## Tell client to no longer send the received inputs
 @rpc("any_peer", "unreliable")
-func _server_receive_unacknowledged_inputs(unacknowledged_inputs: Array) -> void:
+func _server_receive_unacknowledged_serialised_inputs(unacknowledged_serialised_inputs: Array[PackedByteArray]) -> void:
 	# TODO add input sanitation (i.e. don't crash the server)
 	var player_id := multiplayer.get_remote_sender_id()
 	var acknowledged_input_timestamps: Array[int]
-	for input in unacknowledged_inputs:
+	for serialised_input in unacknowledged_serialised_inputs:
+		var input := _get_deserialised_inputs(serialised_input)
 		acknowledged_input_timestamps.push_back(input["time"] as int)
 		_add_inputs_to_buffer(input, player_id)
 
@@ -63,8 +112,10 @@ func _server_receive_unacknowledged_inputs(unacknowledged_inputs: Array) -> void
 ## Stop sending client inputs that have been received by the server
 @rpc("authority", "unreliable")
 func _client_receive_acknowledged_inputs(acknowledged_input_timestamps: Array[int]) -> void:
-	_client_unacknowledged_inputs = _client_unacknowledged_inputs.filter(
-		func(input: Dictionary): input["time"] not in acknowledged_input_timestamps
+	_client_unacknowledged_serialised_inputs = _client_unacknowledged_serialised_inputs.filter(
+		func(serialised_input: PackedByteArray):
+			var time := serialised_input.decode_s32(0)
+			time not in acknowledged_input_timestamps
 	)
 
 
@@ -151,3 +202,9 @@ func get_latest_input_timestamp(player_id: int) -> int:
 
 func get_collection(player_id: int) -> Array:
 	return _input_buffer.get(player_id, [])
+
+
+func is_button_pressed(button_name: String) -> bool:
+	var buttons := get_input("buttons")
+
+	return buttons & input_names[button_name] > 0

@@ -61,7 +61,7 @@ func _on_Peer_disconnected(player_id: int) -> void:
 	if player_id in unregistered_players.keys():
 		unregistered_players.erase(player_id)
 	else:
-		_server_remove_player_by_id.rpc_id(0, player_id)
+		_server_remove_player_by_id.rpc(player_id)
 
 
 func _on_Connected_to_server() -> void:

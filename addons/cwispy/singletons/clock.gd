@@ -6,7 +6,7 @@ var sync_interval_secs := 0.2
 
 
 func _ready() -> void:
-	Multiplayer.player_left.connect(_on_player_left)
+	Multiplayer.player_left.connect(_on_Player_left)
 	NetworkTime.on_tick.connect(_on_tick)
 
 
@@ -22,8 +22,8 @@ func _server_receive_rtt(rtt: float) -> void:
 	player_rtt[player_id] = rtt
 
 
-func _on_player_left(player_id: int) -> void:
-	player_rtt.erase(player_id)
+func _on_Player_left(player: Player) -> void:
+	player_rtt.erase(player.get_id())
 
 
 func _on_tick(_delta: float, _tick: int) -> void:

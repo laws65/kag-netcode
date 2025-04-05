@@ -8,7 +8,7 @@ signal after_tick
 var RENDER_TIME_TICK_DELAY = 1
 var INPUT_BUFFER_SIZE = 2 # not constant
 
-var client_prediction_enabled := true
+var client_prediction_enabled := false
 var remote_client_prediction_enabled := true
 
 var latest_player_ticks: Dictionary[int, int]
@@ -32,10 +32,10 @@ func _tick_world(tick: int) -> void:
 	var blobs := Blob.get_blobs()
 	for blob in blobs as Array[Blob]:
 		var player := blob.get_player()
-		if not Player.is_valid_player(player):
-			var delta := 1/float(Engine.get_physics_ticks_per_second())
-			blob._rollback_tick(delta, tick, true)
-			continue
+		#if not Player.is_valid_player(player):
+		var delta := 1/float(Engine.get_physics_ticks_per_second())
+		blob._rollback_tick(delta, tick, true)
+		continue
 
 		var player_id := player.get_id()
 		var rtt := player.get_rtt()
@@ -56,12 +56,10 @@ func _tick_world(tick: int) -> void:
 			var last_tick := latest_player_ticks[player_id]
 			if i_timestamp == last_tick + 1:
 				blob._rollback_tick(1/float(Engine.get_physics_ticks_per_second()), last_tick + 1, true)
-				print(last_tick + 1, " : ", render_tick)
+				#print(last_tick + 1, " : ", render_tick)
 				latest_player_ticks[player_id] = last_tick + 1
 				if last_tick + 1 == render_tick:
 					break
-
-
 
 
 func _post_tick(_delta: float, tick: int) -> void:
@@ -96,7 +94,7 @@ func _sync_blobs() -> void:
 			_load_snapshot(snapshot)
 			if client_prediction_enabled:
 				_attempt_client_prediction_from(render_tick, NetworkTime.tick)
-			Synchroniser.after_tick.emit()
+			after_tick.emit()
 			return
 
 	# otherwise find latest snapshot and simulate until render_tick

@@ -31,6 +31,7 @@ Synchroniser="*res://addons/cwispy/singletons/synchroniser.gd"
 Clock="*res://addons/cwispy/singletons/clock.gd"
 NetworkedInput="*res://src/singletons/networked_input.gd"
 SnapshotManager="*res://addons/cwispy/singletons/snapshot_manager.gd"
+ServerTicker="*res://addons/cwispy/singletons/server_ticker.gd"
 
 [display]
 

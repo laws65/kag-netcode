@@ -5,70 +5,21 @@ signal after_tick
 
 var RENDER_TIME_TICK_DELAY = 1
 # TODO work on getting this down to 1, on 0 ping it needs to be 2 otherwise the inputs wont exist for some rason
-var INPUT_BUFFER_SIZE = 2 # not constant
 
 var client_prediction_enabled := false
 var remote_client_prediction_enabled := true
 
-var server_latest_player_ticks: Dictionary[int, int]
-var latest_consumed_player_inputs: Dictionary[int, int]
 
 var client_sync_exclude: Array[int] # Array of blob id's that won't be in _load_snapshot()
 
 
 func _ready() -> void:
 	NetworkTime.on_tick.connect(_tick)
-	Multiplayer.player_joined.connect(_on_Player_joined)
-	Multiplayer.player_left.connect(_on_Player_left)
 
 
 func _tick(_delta: float, tick: int) -> void:
 	if Multiplayer.is_client():
 		_sync_blobs()
-	elif Multiplayer.is_server():
-		_tick_world(tick)
-
-
-func _tick_world(tick: int) -> void:
-	var blobs := Blob.get_blobs()
-	for blob: Blob in blobs:
-		var player := blob.get_player()
-		if not Player.is_valid_player(player):
-			blob._rollback_tick(Clock.fixed_delta, tick, true)
-		else:
-			_tick_player_blob(blob, tick)
-
-
-func _tick_player_blob(blob: Blob, tick: int) -> void:
-	var player := blob.get_player()
-	var player_id := player.get_id()
-
-	var rtt := player.get_rtt_msecs()
-	var half_tick_rtt: int = ceil(
-		# TODO rewrite this using NetworkTime.ticktime
-		rtt*0.5/float((1000/float(Engine.get_physics_ticks_per_second())))
-	)
-
-	var render_tick: int = tick - INPUT_BUFFER_SIZE - half_tick_rtt
-	var latest_input_timestamp := NetworkedInput.get_latest_input_timestamp(player_id)
-	var current_tick := server_latest_player_ticks[player_id] + 1
-
-	while current_tick <= render_tick:
-		var predicted = false
-		print("consuming input ", latest_input_timestamp, " on tick ", current_tick, " ", predicted)
-		if NetworkedInput.has_inputs_at_time(player_id, current_tick):
-			latest_consumed_player_inputs[player_id] = current_tick
-		if latest_input_timestamp < current_tick:
-			predicted = true
-			# TODO increase buffer size, to account for changes in ping, etc. so that we don't have to predict inputs consistently
-			#push_warning("Missing input on tick ", current_tick, " : ", latest_input_timestamp)
-			var predicted_input := NetworkedInput.get_predicted_input(player_id, current_tick)
-			NetworkedInput.add_temp_input(player_id, predicted_input)
-
-		blob._rollback_tick(Clock.fixed_delta, current_tick, true)
-		current_tick += 1
-
-	server_latest_player_ticks[player_id] = render_tick
 
 
 func _sync_blobs() -> void:
@@ -83,7 +34,7 @@ func _sync_blobs() -> void:
 	)
 
 	var render_tick = NetworkTime.tick - RENDER_TIME_TICK_DELAY - half_tick_rtt
-	var latest_used_input_tick := latest_consumed_player_inputs.get(multiplayer.get_unique_id())
+	var latest_used_input_tick := ServerTicker.latest_consumed_player_inputs.get(multiplayer.get_unique_id())
 
 	# try to directly load snapshot if available
 	var snapshots_buffer := SnapshotManager.get_snapshots_buffer()
@@ -197,14 +148,3 @@ func _attempt_client_prediction_from(from_tick: int, to_tick: int) -> void:
 		#print("simulating tick ", current_tick, " : ", NetworkTime.tick)
 		blob._rollback_tick(NetworkTime.ticktime, current_tick, false)
 		current_tick += 1
-
-
-func _on_Player_joined(player: Player) -> void:
-	if Multiplayer.is_server():
-		server_latest_player_ticks[player.get_id()] = NetworkTime.tick
-
-
-func _on_Player_left(player: Player) -> void:
-	if Multiplayer.is_server():
-		server_latest_player_ticks.erase(player.get_id())
-		latest_consumed_player_inputs.erase(player.get_id())

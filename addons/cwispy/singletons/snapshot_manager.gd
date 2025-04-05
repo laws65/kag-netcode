@@ -20,7 +20,7 @@ func create_world_snapshot(time: int) -> Dictionary:
 		"blobs": {},
 		"time": time,
 		"authority": Multiplayer.is_server(),
-		"latest_inputs": Synchroniser.latest_consumed_player_inputs,
+		"latest_inputs": ServerTicker.latest_consumed_player_inputs,
 	}
 
 	var blobs := Blob.get_blobs()
@@ -49,7 +49,7 @@ func _receive_server_snapshot(snapshot: Dictionary) -> void:
 	var player_id := multiplayer.get_unique_id()
 	var latest_inputs: Dictionary[int, int] = snapshot["latest_inputs"]
 	if latest_inputs.has(player_id):
-		Synchroniser.latest_consumed_player_inputs[player_id] = latest_inputs[player_id]
+		ServerTicker.latest_consumed_player_inputs[player_id] = latest_inputs[player_id]
 	insert_snapshot_into_buffer(snapshot)
 
 
@@ -62,8 +62,8 @@ func insert_snapshot_into_buffer(snapshot: Dictionary) -> void:
 	if Multiplayer.is_server() or not Synchroniser.client_prediction_enabled:
 		while _snapshots_buffer.size() > 20 + 1:
 			_snapshots_buffer.pop_back()
-	elif Synchroniser.latest_consumed_player_inputs.has(multiplayer.get_unique_id()):
-		var latest_used_input := Synchroniser.latest_consumed_player_inputs[multiplayer.get_unique_id()]
+	elif ServerTicker.latest_consumed_player_inputs.has(multiplayer.get_unique_id()):
+		var latest_used_input := ServerTicker.latest_consumed_player_inputs[multiplayer.get_unique_id()]
 		while not _snapshots_buffer.is_empty() and _snapshots_buffer.back()["time"] < latest_used_input:
 			_snapshots_buffer.pop_back()
 

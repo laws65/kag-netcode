@@ -1,7 +1,11 @@
-[gd_scene load_steps=5 format=4 uid="uid://bwr2sv7g8xm04"]
+[gd_scene load_steps=9 format=4 uid="uid://bwr2sv7g8xm04"]
 
 [ext_resource type="Texture2D" uid="uid://brs8ipgxhu0vx" path="res://icon.svg" id="1_qa35t"]
 [ext_resource type="Texture2D" uid="uid://cvq5my2gx346r" path="res://src/world/world.png" id="2_mfjej"]
+[ext_resource type="Texture2D" uid="uid://blleydqi2cjj1" path="res://src/world/backgrounds/BackgroundIsland.png" id="3_feedl"]
+[ext_resource type="Texture2D" uid="uid://boolqk43f7b7u" path="res://src/world/backgrounds/BackgroundCastle.png" id="4_m8jxs"]
+[ext_resource type="Texture2D" uid="uid://blucfjbn3mjl2" path="res://src/world/backgrounds/BackgroundPlains.png" id="5_gvsfo"]
+[ext_resource type="Texture2D" uid="uid://bs7q8dmcehivu" path="res://src/world/backgrounds/BackgroundTrees.png" id="6_41snr"]
 
 [sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_feedl"]
 texture = ExtResource("2_mfjej")
@@ -32,6 +36,46 @@ physics_layer_0/collision_layer = 1
 sources/0 = SubResource("TileSetAtlasSource_feedl")
 
 [node name="Dust2" type="Node2D"]
+
+[node name="ParallaxBackground" type="Node2D" parent="."]
+visible = false
+position = Vector2(5, -30)
+
+[node name="Plains" type="Parallax2D" parent="ParallaxBackground"]
+scroll_scale = Vector2(0.1, 0.1)
+scroll_offset = Vector2(152, 79)
+repeat_size = Vector2(1024, 0)
+repeat_times = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="ParallaxBackground/Plains"]
+texture = ExtResource("5_gvsfo")
+
+[node name="Trees" type="Parallax2D" parent="ParallaxBackground"]
+scroll_scale = Vector2(0.1, 0.1)
+scroll_offset = Vector2(152, 79)
+repeat_size = Vector2(1024, 0)
+repeat_times = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="ParallaxBackground/Trees"]
+texture = ExtResource("6_41snr")
+
+[node name="Island" type="Parallax2D" parent="ParallaxBackground"]
+scroll_scale = Vector2(0.1, 0.1)
+scroll_offset = Vector2(152, 79)
+repeat_size = Vector2(1024, 0)
+repeat_times = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="ParallaxBackground/Island"]
+texture = ExtResource("3_feedl")
+
+[node name="Castle" type="Parallax2D" parent="ParallaxBackground"]
+scroll_scale = Vector2(0.1, 0.1)
+scroll_offset = Vector2(152, 79)
+repeat_size = Vector2(1024, 0)
+repeat_times = 3
+
+[node name="Sprite2D" type="Sprite2D" parent="ParallaxBackground/Castle"]
+texture = ExtResource("4_m8jxs")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 scale = Vector2(0.1, 0.1)

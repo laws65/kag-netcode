@@ -6,6 +6,8 @@ enum {
 	UP = 2,
 	LEFT = 4,
 	DOWN = 8,
+	LMB = 16,
+	RMB = 32,
 }
 
 var input_names: Dictionary[String, int] = {
@@ -13,6 +15,8 @@ var input_names: Dictionary[String, int] = {
 	"up": UP,
 	"left": LEFT,
 	"down": DOWN,
+	"lmb": LMB,
+	"rmb": RMB,
 }
 
 

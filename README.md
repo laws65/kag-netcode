@@ -3,7 +3,7 @@
 A remake of KAG TDM inside Godot, featuring proper netcode.
 
 ## Features
-- Blob interpolation ✅
+- Blob interpolation ❌
 - Server authoritative inputs ✅
 - Client side remote player prediction ✅
 - Client side prediction ⌛

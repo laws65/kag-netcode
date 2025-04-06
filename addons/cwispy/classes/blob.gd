@@ -2,12 +2,20 @@ extends CharacterBody2D
 class_name Blob
 
 signal player_id_changed(old_id: int, new_id: int)
-
+signal rollback_tick(delta: float, tick: int, is_fresh: bool)
 
 var _player_id := -1
 
 @export var spawn_props: Array[String]
 @export var snapshot_props: Array[String]
+
+
+func _internal_rollback_tick(delta: float, tick: int, is_fresh: bool = true) -> void:
+	if has_player():
+		NetworkedInput.set_time(tick)
+		NetworkedInput.set_target_player(get_player())
+	_rollback_tick(delta, tick, is_fresh)
+	rollback_tick.emit(delta, tick, is_fresh)
 
 
 func _rollback_tick(delta: float, tick: int, is_fresh: bool = true) -> void:

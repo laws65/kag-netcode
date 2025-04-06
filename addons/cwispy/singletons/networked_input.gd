@@ -113,12 +113,12 @@ func _add_inputs_to_buffer(inputs: Dictionary, player_id: int) -> void:
 			_input_buffer[player_id].pop_back()
 
 
-func get_input(input_name: String) -> Variant:
+func get_input(input_name: String, null_ret: Variant = null) -> Variant:
 	assert(_target_input_time != -1, "Target input time must be selected")
 	assert(_target_player_id != -1, "Target player must be selected")
 
 	if not _input_buffer.has(_target_player_id):
-		return null
+		return null_ret
 
 	for i in _input_buffer[_target_player_id].size():
 		var inputs := _input_buffer[_target_player_id][i] as Dictionary
@@ -132,7 +132,7 @@ func get_input(input_name: String) -> Variant:
 
 	# TODO fix this bandaid where sometimes the client deletes their own input and can't find it, def something to do with needing rollback for high ping (therefore needing old inputs), even though they've been acknowledged? idk
 	if Multiplayer.is_client():
-		return _get_inputs(_target_input_time)[input_name]
+		return _get_inputs(_target_input_time).get(input_name, null_ret)
 
 	push_error("Trying to get an out of date input! For player " + str(_target_player_id) + " their oldest input is tick " + str(_input_buffer[_target_player_id].back()["time"]) + " but you are requesting tick " + str(_target_input_time))
 	return

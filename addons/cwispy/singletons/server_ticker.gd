@@ -1,6 +1,8 @@
 extends Node
+## Ticks the world blobs, and player blobs if they have inputs
+# TODO move latest_consumed_player_inputs() code out of world state maybe? More for SOC
 
-
+# TODO work on getting this down to 1, on 0 ping it needs to be 2 otherwise the inputs wont exist for some rason
 var INPUT_BUFFER_SIZE = 2 # not constant
 var server_latest_player_ticks: Dictionary[int, int]
 
@@ -28,7 +30,7 @@ func _tick_world(tick: int) -> void:
 	for blob: Blob in blobs:
 		var player := blob.get_player()
 		if not Player.is_valid_player(player):
-			blob._rollback_tick(Clock.fixed_delta, tick, true)
+			blob._internal_rollback_tick(Clock.fixed_delta, tick, true)
 		else:
 			_tick_player_blob(blob, tick)
 
@@ -49,7 +51,9 @@ func _tick_player_blob(blob: Blob, tick: int) -> void:
 
 	while current_tick <= render_tick:
 		var predicted = false
-		print("consuming input ", latest_input_timestamp, " on tick ", current_tick, " ", predicted)
+		# BUG fix this print to show the actual inptu being used, not just the latest one
+		if Synchroniser._debug_syncing:
+			print("consuming input ", latest_input_timestamp, " on tick ", current_tick, " ", predicted)
 		if NetworkedInput.has_inputs_at_time(player_id, current_tick):
 			latest_consumed_player_inputs[player_id] = current_tick
 		if latest_input_timestamp < current_tick:
@@ -59,7 +63,7 @@ func _tick_player_blob(blob: Blob, tick: int) -> void:
 			var predicted_input := NetworkedInput.get_predicted_input(player_id, current_tick)
 			NetworkedInput.add_temp_input(player_id, predicted_input)
 
-		blob._rollback_tick(Clock.fixed_delta, current_tick, true)
+		blob._internal_rollback_tick(Clock.fixed_delta, current_tick, true)
 		current_tick += 1
 
 	server_latest_player_ticks[player_id] = render_tick

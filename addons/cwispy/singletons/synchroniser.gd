@@ -5,12 +5,13 @@ signal after_tick
 
 var RENDER_TIME_TICK_DELAY = 1
 
-var client_prediction_enabled := false
+var client_prediction_enabled := true
 var remote_client_prediction_enabled := false
 
-var _debug_syncing := false
+var _debug_syncing := true
 
-var client_sync_exclude: Array[int] # Array of blob id's that won't be in _load_snapshot()
+var client_sync_exclude: Array[int] # Array of the only blob ids that won't be in _load_snapshot()
+var client_sync_include: Array[int] # Array of the only blob ids that will be synced in _load_snapshot()
 
 
 func _ready() -> void:
@@ -34,36 +35,38 @@ func _sync_blobs() -> void:
 		rtt*0.5/float((1000/float(Engine.get_physics_ticks_per_second())))
 	)
 
-	var render_tick = NetworkTime.tick - RENDER_TIME_TICK_DELAY - half_tick_rtt
-	var latest_used_input_tick := ServerTicker.latest_consumed_player_inputs.get(multiplayer.get_unique_id())
+	var render_tick: int = NetworkTime.tick - RENDER_TIME_TICK_DELAY - half_tick_rtt
 
 	# try to directly load snapshot if available
-	var snapshots_buffer := SnapshotManager.get_snapshots_buffer()
-	for i in snapshots_buffer.size():
-		var i_timestamp := snapshots_buffer[i]["time"] as int
-		if render_tick != i_timestamp:
-			continue
-		if _debug_syncing:
-			print("render tick", render_tick, " : ", NetworkTime.tick)
-			print("last used input ", latest_used_input_tick)
-		var snapshot: Dictionary = snapshots_buffer[i]
-
-		if (client_prediction_enabled
-		and latest_used_input_tick
-		and latest_used_input_tick < render_tick):
-			_attempt_client_prediction_from(latest_used_input_tick, NetworkTime.tick)
-		elif client_prediction_enabled:
-			_attempt_client_prediction_from(render_tick, NetworkTime.tick)
-		var my_blob_id := Multiplayer.get_my_blob_id()
-		if client_prediction_enabled:
-			client_sync_exclude.push_back(my_blob_id)
-			_load_snapshot(snapshot)
-			client_sync_exclude.pop_back()
+	var render_snapshot := SnapshotManager.get_snapshot_at_time(render_tick)
+	if render_snapshot:
+		if not client_prediction_enabled:
+			_load_snapshot(render_snapshot)
 		else:
-			_load_snapshot(snapshot)
-		after_tick.emit()
-		return
+			var predict_from := render_tick
+			var latest_used_input_tick := ServerTicker.latest_consumed_player_inputs.get(multiplayer.get_unique_id())
+			if latest_used_input_tick:
+				# TODO figure out if below is true \/
+				# If the server missed a player's input, we'll want to predict from an older snapshot before the input was missed
+				predict_from = min(predict_from, latest_used_input_tick)
+			_client_side_predict_from(predict_from, NetworkTime.tick)
+	else:
+		_predict_tick(render_tick)
 
+	after_tick.emit()
+
+
+func _rollback_to(time: int) -> void:
+	var snapshots_buffer := SnapshotManager.get_snapshots_buffer()
+	for snapshot in snapshots_buffer:
+		if snapshot["time"] == time:
+			_load_snapshot(snapshot)
+			return
+
+
+func _predict_tick(render_tick: int) -> void:
+	var snapshots_buffer := SnapshotManager.get_snapshots_buffer()
+	print("Client: missing state snapshot for tick ", render_tick)
 	# otherwise find latest snapshot and simulate until render_tick
 	var recent_snapshot_before_render_tick: Dictionary = {"time":-1}
 	for i in snapshots_buffer.size():
@@ -110,20 +113,14 @@ func _sync_blobs() -> void:
 		ticks_to_simulate -= 1
 
 	if client_prediction_enabled:
-		_attempt_client_prediction_from(render_tick, NetworkTime.tick)
-	after_tick.emit()
-
-
-func _rollback_to(time: int) -> void:
-	var snapshots_buffer := SnapshotManager.get_snapshots_buffer()
-	for snapshot in snapshots_buffer:
-		if snapshot["time"] == time:
-			_load_snapshot(snapshot)
-			return
+		_client_side_predict_from(render_tick, NetworkTime.tick)
 
 
 func _load_snapshot(snapshot: Dictionary) -> void:
+	assert(client_sync_exclude.is_empty() or client_sync_include.is_empty(), "You fucked up")
+
 	for blob_id in snapshot["blobs"].keys():
+		if client_sync_include and blob_id not in client_sync_include: continue
 		if blob_id in client_sync_exclude: continue
 
 		if _debug_syncing:
@@ -135,21 +132,28 @@ func _load_snapshot(snapshot: Dictionary) -> void:
 			blob.load_snapshot(blob_snapshot)
 
 
-func _attempt_client_prediction_from(from_tick: int, to_tick: int) -> void:
+func _client_side_predict_from(from_tick: int, to_tick: int) -> void:
 	if _debug_syncing:
-		print("predictin from ", from_tick, " to ", to_tick)
+		print("Client: predicting from ", from_tick, " to ", to_tick)
 	assert(from_tick <= to_tick)
 
 	if not Multiplayer.is_client(): return
 	if not Multiplayer.has_local_blob(): return
 
 	var blob := Multiplayer.get_my_blob()
+	var blob_id := blob.get_id()
 
+	# Sync client blob back to server authoritative state
+	client_sync_include.push_back(blob_id)
 	_rollback_to(from_tick)
+	client_sync_include.pop_back()
+
+	client_sync_exclude.push_back(blob_id)
 	var current_tick := from_tick + 1
 	while current_tick <= to_tick:
+		_rollback_to(current_tick)
 		if _debug_syncing:
-			print("predicting ", current_tick)
-		#print("simulating tick ", current_tick, " : ", NetworkTime.tick)
+			print("Client: predicting tick ", current_tick)
 		blob._internal_rollback_tick(NetworkTime.ticktime, current_tick, false)
 		current_tick += 1
+	client_sync_exclude.pop_back()

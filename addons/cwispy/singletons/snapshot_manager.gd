@@ -87,3 +87,11 @@ func insert_snapshot_into_buffer(snapshot: Dictionary) -> void:
 			return
 
 	_snapshots_buffer.push_back(snapshot)
+
+
+func get_snapshot_at_time(time: int) -> Dictionary:
+	for snapshot in _snapshots_buffer:
+		if snapshot["time"] == time:
+			return snapshot
+
+	return {}

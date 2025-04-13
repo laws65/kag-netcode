@@ -63,16 +63,16 @@ func _get_deserialised_inputs(bytes: PackedByteArray) -> Dictionary:
 
 
 func _get_predicted_input(player_id: int, tick: int) -> Dictionary:
-	var out := get_inputs_for_player_at_time(player_id, tick)
-	if out.is_empty():
-		out["buttons"] = 0
-		out["mouse"] = Vector2.ZERO
-	out["flag_predicted"] = true
-	out["time"] = tick
-	return out
+	var previous_inputs := get_inputs_for_player_at_time(player_id, tick-1)
+	var predicted := previous_inputs.duplicate(true)
+	if predicted.is_empty():
+		predicted["buttons"] = 0
+		predicted["mouse"] = Vector2.ZERO
+
+	return predicted
 
 
 func is_button_pressed(button_name: String) -> bool:
-	var buttons: int = get_input("buttons")
+	var buttons: int = get_input("buttons", 0)
 
 	return buttons & input_names[button_name] > 0

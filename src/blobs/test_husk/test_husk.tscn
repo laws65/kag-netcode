@@ -1,0 +1,30 @@
+[gd_scene load_steps=5 format=3 uid="uid://blcvrlexnam5h"]
+
+[ext_resource type="Script" uid="uid://c8jrual33407h" path="res://src/blobs/test_husk/test_husk.gd" id="1_gdgpu"]
+[ext_resource type="Texture2D" uid="uid://brs8ipgxhu0vx" path="res://icon.svg" id="2_a5xqh"]
+[ext_resource type="Script" uid="uid://buscm2narplb0" path="res://addons/cwispy/classes/smoother_2d.gd" id="3_cismy"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_gdgpu"]
+size = Vector2(12.8, 12.8)
+
+[node name="TestHusk" type="CharacterBody2D"]
+script = ExtResource("1_gdgpu")
+spawn_props = Array[String](["position", ""])
+snapshot_props = Array[String](["velocity", "position"])
+metadata/_custom_type_script = "uid://bum86bndhmfxq"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("RectangleShape2D_gdgpu")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+scale = Vector2(0.1, 0.1)
+texture = ExtResource("2_a5xqh")
+
+[node name="Smoother2D" type="Node" parent="." node_paths=PackedStringArray("authority", "targets")]
+script = ExtResource("3_cismy")
+authority = NodePath("..")
+targets = [NodePath("../Sprite2D")]
+enabled = false
+metadata/_custom_type_script = "uid://buscm2narplb0"
+
+[connection signal="rollback_tick" from="." to="." method="_on_rollback_tick"]

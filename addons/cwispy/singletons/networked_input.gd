@@ -8,7 +8,6 @@ var _target_input_time := -1
 var _target_player_id := -1
 
 var _client_unacknowledged_serialised_inputs: Array[PackedByteArray]
-var _players_with_temp_inputs: Array[int]
 
 #region Implementation details
 func _get_inputs(tick: int) -> Dictionary:
@@ -135,7 +134,7 @@ func get_input(input_name: String, null_ret: Variant = null) -> Variant:
 		return _get_inputs(_target_input_time).get(input_name, null_ret)
 
 	push_error("Trying to get an out of date input! For player " + str(_target_player_id) + " their oldest input is tick " + str(_input_buffer[_target_player_id].back()["time"]) + " but you are requesting tick " + str(_target_input_time))
-	return
+	return null_ret
 
 
 func set_target_player_id(target_player_id: int) -> void:
@@ -180,11 +179,10 @@ func has_inputs_at_time(player_id: int, tick: int) -> bool:
 func get_predicted_input(player_id: int, tick: int) -> Dictionary:
 	var predicted := _get_predicted_input(player_id, tick)
 	predicted["flag_predicted"] = true
+	predicted["time"] = tick
 	return predicted
 
 
 func add_temp_input(player_id: int, input: Dictionary) -> void:
 	input["flag_temp"] = true
 	_add_inputs_to_buffer(input, player_id)
-	if player_id not in _players_with_temp_inputs:
-		_players_with_temp_inputs.push_back(player_id)

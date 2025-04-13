@@ -57,6 +57,7 @@ func _tick_player_blob(blob: Blob, tick: int) -> void:
 		if NetworkedInput.has_inputs_at_time(player_id, current_tick):
 			latest_consumed_player_inputs[player_id] = current_tick
 		if latest_input_timestamp < current_tick:
+			print("Server: missed last player input, predicting input for tick " + str(current_tick))
 			predicted = true
 			# TODO increase buffer size, to account for changes in ping, etc. so that we don't have to predict inputs consistently
 			#push_warning("Missing input on tick ", current_tick, " : ", latest_input_timestamp)

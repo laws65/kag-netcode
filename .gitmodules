@@ -1,0 +1,3 @@
+[submodule "addons/cwispy"]
+	path = addons/cwispy
+	url = https://github.com/laws65/cwispy.git

@@ -19,19 +19,19 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-Multiplayer="*res://addons/cwispy/singletons/multiplayer.gd"
-GameManager="*res://addons/cwispy/singletons/game_manager.gd"
 NetworkTime="*res://addons/netfox/network-time.gd"
 NetworkTimeSynchronizer="*res://addons/netfox/network-time-synchronizer.gd"
 NetworkRollback="*res://addons/netfox/rollback/network-rollback.gd"
 NetworkEvents="*res://addons/netfox/network-events.gd"
 NetworkPerformance="*res://addons/netfox/network-performance.gd"
 WindowTiler="*res://addons/netfox.extras/window-tiler.gd"
-Synchroniser="*res://addons/cwispy/singletons/synchroniser.gd"
+Multiplayer="*res://addons/cwispy/singletons/multiplayer.gd"
 Clock="*res://addons/cwispy/singletons/clock.gd"
-NetworkedInput="*res://src/scripts/singletons/networked_input.gd"
-SnapshotManager="*res://addons/cwispy/singletons/snapshot_manager.gd"
+GameManager="*res://addons/cwispy/singletons/game_manager.gd"
 ServerTicker="*res://addons/cwispy/singletons/server_ticker.gd"
+SnapshotManager="*res://addons/cwispy/singletons/snapshot_manager.gd"
+Synchroniser="*res://addons/cwispy/singletons/synchroniser.gd"
+NetworkedInput="*res://addons/cwispy/singletons/networked_input.gd"
 
 [display]
 
@@ -39,7 +39,7 @@ window/vsync/vsync_mode=0
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/netfox.extras/plugin.cfg", "res://addons/netfox.internals/plugin.cfg", "res://addons/netfox/plugin.cfg")
+enabled=PackedStringArray("res://addons/cwispy/plugin.cfg", "res://addons/netfox.extras/plugin.cfg", "res://addons/netfox.internals/plugin.cfg", "res://addons/netfox/plugin.cfg")
 
 [input]
 

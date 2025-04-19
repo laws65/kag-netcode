@@ -63,8 +63,8 @@ func _on_rollback_tick(delta: float, _tick: int, is_fresh: bool = true) -> void:
 	var jump_pressed := false
 
 	if i_buttons != null:
-		direction = int(NetworkedInput.is_button_pressed("right")) - int(NetworkedInput.is_button_pressed("left"))
-		jump_pressed = NetworkedInput.is_button_pressed("up")
+		direction = int(NetworkedInput.is_button_pressed(&"right")) - int(NetworkedInput.is_button_pressed(&"left"))
+		jump_pressed = NetworkedInput.is_button_pressed(&"up")
 		mouse_pos = i_mouse
 
 	var facing = 1
@@ -126,8 +126,8 @@ func _on_rollback_tick(delta: float, _tick: int, is_fresh: bool = true) -> void:
 		just_jumped = false
 
 	if (blob.is_on_floor()
-	and not NetworkedInput.is_button_pressed("right") and not NetworkedInput.is_button_pressed("left")
-	and NetworkedInput.is_button_pressed("down")):
+	and not NetworkedInput.is_button_pressed(&"right") and not NetworkedInput.is_button_pressed(&"left")
+	and NetworkedInput.is_button_pressed(&"down")):
 		blob.crouched = true
 	else:
 		blob.crouched = false

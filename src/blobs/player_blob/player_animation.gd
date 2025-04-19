@@ -39,7 +39,7 @@ func _on_rollback_tick(_delta: float, _tick: int, is_fresh: bool) -> void:
 	var new_animation: String = "idle"
 	if not blob.is_on_floor():
 		new_animation = "air"
-	elif NetworkedInput.is_button_pressed("right") or NetworkedInput.is_button_pressed("left"):
+	elif NetworkedInput.is_button_pressed(&"right") or NetworkedInput.is_button_pressed(&"left"):
 		new_animation = "walk"
 
 	if blob.crouched:
@@ -49,15 +49,15 @@ func _on_rollback_tick(_delta: float, _tick: int, is_fresh: bool) -> void:
 	var angle_to_mouse_rad := -blob.position.angle_to_point(mouse_pos)
 	if blob.shielded:
 		var dir_string := Helpers.get_direction_string_from_angle(angle_to_mouse_rad)
-		if NetworkedInput.is_button_pressed("right") or NetworkedInput.is_button_pressed("left"):
+		if NetworkedInput.is_button_pressed(&"right") or NetworkedInput.is_button_pressed(&"left"):
 			if dir_string == "vertical":
 				dir_string = "diagonal_up"
-			if (not blob.is_on_floor() or NetworkedInput.is_button_pressed("up")) and dir_string == "diagonal_down":
+			if (not blob.is_on_floor() or NetworkedInput.is_button_pressed(&"up")) and dir_string == "diagonal_down":
 				new_animation = "surf"
 			else:
 				new_animation = "shield_move_" + dir_string
 		else:
 			new_animation = "shield_static_" + dir_string
-		if (not blob.is_on_floor() or NetworkedInput.is_button_pressed("up")) and (dir_string == "diagonal_up" or dir_string == "vertical"):
+		if (not blob.is_on_floor() or NetworkedInput.is_button_pressed(&"up")) and (dir_string == "diagonal_up" or dir_string == "vertical"):
 			new_animation = "glide"
 	animation_player.play(new_animation)

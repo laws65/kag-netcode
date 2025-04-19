@@ -19,9 +19,9 @@ func _ready() -> void:
 
 
 func _on_rollback_tick(_delta: float, _tick: int, _is_fresh: bool) -> void:
-	var input_crouch := NetworkedInput.is_button_pressed("down")
+	var input_crouch := NetworkedInput.is_button_pressed(&"down")
 	if blob.is_on_floor():
-		if not NetworkedInput.is_button_pressed("right") and not NetworkedInput.is_button_pressed("left"):
+		if not NetworkedInput.is_button_pressed(&"right") and not NetworkedInput.is_button_pressed(&"left"):
 			crouch = true
 		else:
 			crouch = false

@@ -14,8 +14,14 @@ func _on_rollback_tick(delta: float, _tick: int, is_fresh: bool) -> void:
 		if not Multiplayer.is_server() and not self.is_my_blob():
 			return
 
-	var move_dir_x := int(NetworkedInput.is_button_pressed("right")) - int(NetworkedInput.is_button_pressed("left"))
-	var jump := is_on_floor() and NetworkedInput.is_button_pressed("up")
+	if Synchroniser._debug_syncing:
+		var msg = "Using input " + str(NetworkedInput.get_input_timestamp()) + " for tick " + str(_tick)
+		if Multiplayer.is_server():
+			print("Server: ", msg)
+		else:
+			print("Client: ", msg)
+	var move_dir_x := int(NetworkedInput.is_button_pressed(&"right")) - int(NetworkedInput.is_button_pressed(&"left"))
+	var jump := is_on_floor() and NetworkedInput.is_button_pressed(&"up")
 
 	velocity.y += gravity * delta
 	velocity.y -= int(jump) * jump_force

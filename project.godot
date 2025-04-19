@@ -25,13 +25,14 @@ NetworkRollback="*res://addons/netfox/rollback/network-rollback.gd"
 NetworkEvents="*res://addons/netfox/network-events.gd"
 NetworkPerformance="*res://addons/netfox/network-performance.gd"
 WindowTiler="*res://addons/netfox.extras/window-tiler.gd"
-NetworkedInput="*res://src/scripts/singletons/networked_input.gd"
 Multiplayer="*res://addons/cwispy/singletons/multiplayer.gd"
 Clock="*res://addons/cwispy/singletons/clock.gd"
 GameManager="*res://addons/cwispy/singletons/game_manager.gd"
 ServerTicker="*res://addons/cwispy/singletons/server_ticker.gd"
 SnapshotManager="*res://addons/cwispy/singletons/snapshot_manager.gd"
 Synchroniser="*res://addons/cwispy/singletons/synchroniser.gd"
+NetworkedInput="*res://addons/cwispy/singletons/networked_input.gd"
+Global="*res://src/scripts/singletons/global.gd"
 
 [display]
 
@@ -89,6 +90,7 @@ time/sync_to_physics=true
 
 [physics]
 
+common/physics_ticks_per_second=10
 common/physics_jitter_fix=0.0
 2d/physics_engine="Rapier2D"
 common/physics_interpolation=true

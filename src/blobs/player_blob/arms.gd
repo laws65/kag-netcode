@@ -16,7 +16,7 @@ func _on_rollback_tick(_delta: float, _tick: int, is_fresh: bool) -> void:
 		if not blob.is_my_blob() and not is_fresh:
 			return
 
-	if not blob.stunned and NetworkedInput.is_button_pressed("rmb"):
+	if not blob.stunned and NetworkedInput.is_button_pressed(&"rmb"):
 		blob.shielded = true
 	else:
 		blob.shielded = false
